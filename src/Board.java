@@ -13,28 +13,57 @@ public class Board {
     }
 
     /**
-     * Places a word on the board if it fits and doesn't conflict.
+     * Places a word on the board if it fits, doesn't conflict, and connects to existing tiles.
+     * Supports both horizontal (left to right) and vertical (top to bottom) placement.
      *
      * @param word the word to place
-     * @param row starting row (0–14)
-     * @param col starting column (0–14)
-     * @param horizontal true for horizontal, false for vertical
+     * @param row starting row index (0–14)
+     * @param col starting column index (0–14)
+     * @param horizontal true for horizontal (left to right), false for vertical (top to bottom)
      * @param player the player placing the word
-     * @return true if placement was successful, false otherwise
+     * @return true if placement was successful; false otherwise
      */
     public boolean placeWord(String word, int row, int col, boolean horizontal, Player player) {
-        // Check bounds
+        // Check board bounds
         if (horizontal && col + word.length() > 15) return false;
         if (!horizontal && row + word.length() > 15) return false;
 
-        // Check for conflicts
+        // Check for tile conflicts
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
             Tile existing = grid[r][c];
             if (existing != null && existing.getLetter() != word.charAt(i)) {
-                return false;
+                return false; // Conflict with existing tile
             }
+        }
+
+        // Check adjacency to existing tiles (unless it's the first move)
+        boolean connectsToExistingTile = false;
+
+        for (int i = 0; i < word.length(); i++) {
+            int r = horizontal ? row : row + i;
+            int c = horizontal ? col + i : col;
+
+            // Reuse existing tile
+            if (grid[r][c] != null) {
+                connectsToExistingTile = true;
+                break;
+            }
+
+            // Check adjacent tiles (up, down, left, right)
+            if ((r > 0 && grid[r - 1][c] != null) ||
+                    (r < 14 && grid[r + 1][c] != null) ||
+                    (c > 0 && grid[r][c - 1] != null) ||
+                    (c < 14 && grid[r][c + 1] != null)) {
+                connectsToExistingTile = true;
+            }
+        }
+
+        // Reject if no connection and not first move
+        if (!connectsToExistingTile && !isFirstMove()) {
+            System.out.println("Word must connect to existing tiles.");
+            return false;
         }
 
         // Place tiles and consume from rack
@@ -43,7 +72,7 @@ public class Board {
             int c = horizontal ? col + i : col;
             if (grid[r][c] == null) {
                 Tile tile = player.findTileInRack(word.charAt(i));
-                if (tile == null) return false;
+                if (tile == null) return false; // Player doesn't have required tile
                 grid[r][c] = tile;
                 player.getRack().remove(tile);
             }
@@ -69,7 +98,22 @@ public class Board {
             System.out.println();
         }
     }
-
+    /**
+     * Checks if the board is empty, indicating it's the first move of the game.
+     * Used to allow the first word to be placed without adjacency constraints.
+     *
+     * @return true if no tiles are placed yet; false otherwise
+     */
+    public boolean isFirstMove() {
+        for (int r = 0; r < 15; r++) {
+            for (int c = 0; c < 15; c++) {
+                if (grid[r][c] != null) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     /**
      * Calculates the score for a word based on tile points.
      * Does not yet account for premium squares.
