@@ -156,7 +156,7 @@ public class Game {
     /**
      * Advances to the next player's turn.
      */
-    private void nextPlayer() {
+    void nextPlayer() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     }
 
@@ -167,7 +167,7 @@ public class Game {
      *
      * @param player the player whose rack should be refilled
      */
-    private void refillRack(Player player) {
+    void refillRack(Player player) {
         while (player.getRack().size() < 7 && tileBag.remainingTiles() > 0) {
             Tile tile = tileBag.drawTile();
             if (tile != null) {
@@ -236,5 +236,26 @@ public class Game {
 
         refillRack(player);
         System.out.println("Tiles swapped. New rack: " + player.rackToString());
+    }
+
+    /// Getters and setters
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
+    public TileBag getTileBag() {
+        return tileBag;
+    }
+
+    public Dictionary getDictionary() {
+        return dictionary;
+    }
+
+    public int getCurrentPlayerIndex() {
+        return currentPlayerIndex;
     }
 }
