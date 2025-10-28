@@ -89,4 +89,13 @@ public class TileBag {
             tiles.add(new Tile(letter, points));
         }
     }
+
+    /**
+     * Returns the number of tiles remaining in the bag.
+     *
+     * @return the number of tiles left
+     */
+    public int size() {
+        return tiles.size(); // or whatever your internal list is called
+    }
 }

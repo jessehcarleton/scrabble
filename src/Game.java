@@ -72,8 +72,15 @@ public class Game {
                     " " + shortName + "'s score: " + currentPlayer.getScore());
 
             // Show turn options
-            System.out.println("Here are your options: Place Tile(s) (0), Swap Tiles (1), Skip Turn (2)");
-            System.out.print("Enter move (e.g., H8 HORIZONTAL HELLO), PASS, or QUIT: ");
+            System.out.println("\nYour options:");
+            System.out.println("  [0] Place Tile(s)");
+            System.out.println("  [1] Swap Tiles");
+            System.out.println("  [2] Skip Turn");
+
+            System.out.println("\nEnter your move:");
+            System.out.println("  → Format: H8 HORIZONTAL HELLO / H8 VERTICAL HELLO");
+            System.out.println("  → Or type: PASS or QUIT");
+            System.out.print("> ");
             String input = scanner.nextLine().trim().toUpperCase();
 
 
@@ -84,7 +91,7 @@ public class Game {
             }
 
             // Handle passing
-            if (input.equals("PASS")) {
+            if (input.equals("PASS") || input.equals("2")) {
                 System.out.println(currentPlayer.getName() + " passed.");
                 nextPlayer();
                 continue;
