@@ -3,19 +3,46 @@ import java.awt.*;
 import java.util.ArrayList;
 
 public class View extends JFrame{
+    private  Dictionary dictionary;
+    private Game game;
     private JButton[][] boardButtons;
     private JButton playButton, swapButton, passButton;
     ArrayList<String> players = new ArrayList<>();
     JButton [] playerRack = new JButton[7];
+    JPanel boardPanel;
+    JPanel playerTilePanel;
+    JPanel tilebagPanel;
+    JPanel playerPanel;
+    JPanel controlPanel;
+    JPanel scorePanel;
 
-    public View() {
+    JLabel turn;
+    JLabel tilesLeft;
+    JTextField tileTotal;
+
+
+    public View() throws Exception {
         super("Scrabble");
-        makePlayers();
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
+
+        // Controls Initialization
+        this.dictionary = new Dictionary();
+        this.game = new Game(dictionary);
+        controlPanel = new JPanel();
+        playerPanel = new JPanel();
+        playerPanel.setLayout(new BoxLayout(playerPanel, BoxLayout.Y_AXIS));
+        playerTilePanel = new JPanel();
+        turn = new JLabel();
+        tileTotal = new JTextField();
+
+
+
+
         // Board Initialization
-        JPanel boardPanel = new JPanel(new GridLayout(15, 15));
+        boardPanel = new JPanel(new GridLayout(15, 15));
         boardButtons = new JButton[15][15];
         for (int i = 0; i < 15; i++) {
             for (int j = 0; j < 15; j++) {
@@ -24,8 +51,7 @@ public class View extends JFrame{
             }
         }
 
-        // Controls Initialization
-        JPanel controlPanel = new JPanel();
+
         playButton = new JButton("Play");
         swapButton = new JButton("Swap");
         passButton = new JButton("Pass");
@@ -33,16 +59,33 @@ public class View extends JFrame{
         controlPanel.add(swapButton);
         controlPanel.add(passButton);
 
+        playerTilePanel.add(turn);
+
+        // Initialize players
+        players = buildPlayers();
+        for (String player: players) {
+            game.addPlayer(player);
+        }
+
+        // Panel setup
+        buildPlayerNamePanel(players);
+        buildTileBagPanel();
+        playerPanel.add(tilebagPanel);
+        playerPanel.add(scorePanel);
+
+
         add(boardPanel, BorderLayout.CENTER);
         add(controlPanel, BorderLayout.SOUTH);
+        add(playerPanel,BorderLayout.WEST);
 
 
-
+        setSize(600,600);
+        setVisible(true);
     }
 
     // Initialize players
-    public ArrayList<String> makePlayers() {
-
+    public ArrayList<String> buildPlayers() {
+        players.clear();
         String[] options = {"2", "3", "4"};
         // Choose Number of players
         int choice = Integer.parseInt( (String)JOptionPane.showInputDialog(null,
@@ -61,27 +104,50 @@ public class View extends JFrame{
         return players;
     }
 
-    public void playerInfoSection(Player player) {
-        JPanel playerInfo = new JPanel();
-        JLabel turn = new JLabel();
+    public void buildPlayerNamePanel(ArrayList<String> players) {
+        scorePanel = new JPanel();
+        scorePanel.setLayout(new BoxLayout(scorePanel, BoxLayout.Y_AXIS));
 
-        playerInfo.setLayout(new BorderLayout());
-        turn.setText(player.getName() + "'s turn");
+        for (String name : players) {
+            JLabel scoreLabel = new JLabel(name + "Score: ");
+            JTextField score = new JTextField("0");
+            score.setEditable(false);
 
-        // Make a button for each tile in player's rack
-        for (int i = 0; i < player.getRack().size(); i++) {
-            playerRack[i] = new JButton();
-            playerRack[i].setText(player.getRack().get(i).toString());
-            playerInfo.add(playerRack[i]);
+            JPanel individualScorePanel = new JPanel();
+            individualScorePanel.setLayout(new BoxLayout(individualScorePanel, BoxLayout.X_AXIS));
+            individualScorePanel.add(scoreLabel);
+            individualScorePanel.add(score);
+
+            scorePanel.add(individualScorePanel);
         }
-
-        playerInfo.add(turn);
-
-
-
 
 
     }
+    public void buildTileBagPanel() {
+        tilebagPanel = new JPanel();
+        tilebagPanel.setLayout(new BoxLayout(tilebagPanel, BoxLayout.X_AXIS));
+
+        tilesLeft = new JLabel("Tiles Left: ");
+        tileTotal.setText(String.valueOf(game.getTileBag().remainingTiles()));
+        tileTotal.setEditable(false);
+
+        tilebagPanel.add(tilesLeft);
+        tilebagPanel.add(tileTotal);
+
+    }
+    public void buildPlayerTilesPanel(Player player) {
+        playerTilePanel = new JPanel();
+        playerTilePanel.setLayout(new BoxLayout(playerTilePanel, BoxLayout.X_AXIS));
+
+        turn = new JLabel(player.getName() + "'s Turn");
+        playerTilePanel.add(turn);
+
+        for (int i = 0; i < 7; i++) {
+            playerRack[i] = new JButton(player.getRack().get(i).toString());
+            playerTilePanel.add(playerRack[i]);
+        }
+    }
+
 
 
 
