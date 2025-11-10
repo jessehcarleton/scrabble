@@ -8,6 +8,7 @@ public class View extends JFrame{
     private JButton[][] boardButtons;
     private JButton playButton, swapButton, passButton;
     ArrayList<String> players = new ArrayList<>();
+    ArrayList<JTextField> scoreFields = new ArrayList<>();
     JButton [] playerRack = new JButton[7];
     JPanel boardPanel;
     JPanel playerTilePanel;
@@ -59,7 +60,6 @@ public class View extends JFrame{
         controlPanel.add(swapButton);
         controlPanel.add(passButton);
 
-        playerTilePanel.add(turn);
 
         // Initialize players
         players = buildPlayers();
@@ -70,9 +70,10 @@ public class View extends JFrame{
         // Panel setup
         buildPlayerNamePanel(players);
         buildTileBagPanel();
+        buildPlayerTilesPanel(game.getPlayers().getFirst());
         playerPanel.add(tilebagPanel);
         playerPanel.add(scorePanel);
-
+        playerPanel.add(playerTilePanel);
 
         add(boardPanel, BorderLayout.CENTER);
         add(controlPanel, BorderLayout.SOUTH);
@@ -113,12 +114,13 @@ public class View extends JFrame{
             JTextField score = new JTextField("0");
             score.setEditable(false);
 
-            JPanel individualScorePanel = new JPanel();
-            individualScorePanel.setLayout(new BoxLayout(individualScorePanel, BoxLayout.X_AXIS));
-            individualScorePanel.add(scoreLabel);
-            individualScorePanel.add(score);
+            JPanel scoreDisplay = new JPanel();
+            scoreDisplay.setLayout(new BoxLayout(scoreDisplay, BoxLayout.X_AXIS));
+            scoreDisplay.add(scoreLabel);
+            scoreDisplay.add(score);
 
-            scorePanel.add(individualScorePanel);
+            scoreFields.add(score);
+            scorePanel.add(scoreDisplay);
         }
 
 
@@ -148,6 +150,28 @@ public class View extends JFrame{
         }
     }
 
+    // For model when player makes a move
+    public void updatePlayerTiles(Player player) {
+        turn.setText(player.getName() + "'s Turn");
+
+        for (int i = 0; i < 7; i++) {
+            if (i < player.getRack().size()) {
+                playerRack[i].setText(player.getRack().get(i).toString());
+                playerRack[i].setEnabled(true);
+            } else {
+                playerRack[i].setText(" ");
+                playerRack[i].setEnabled(false);
+            }
+        }
+
+    }
+
+    public void updateTileBagPanel() {
+        tileTotal.setText(String.valueOf(game.getTileBag().remainingTiles()));
+    }
+    public void updateScore(int playerIndex, int newScore) {
+        scoreFields.get(playerIndex).setText(String.valueOf(newScore));
+    }
 
 
 
