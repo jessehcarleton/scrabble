@@ -1,7 +1,10 @@
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
-
+/**
+ * View class that handles the look of the game.
+ *
+ */
 public class View extends JFrame{
     private  Dictionary dictionary;
     private Game game;
@@ -21,7 +24,10 @@ public class View extends JFrame{
     JLabel tilesLeft;
     JTextField tileTotal;
 
-
+    /**
+     * Constructs a view for the Scrabble game.
+     * Information Panels and game buttons are made.
+     */
     public View() throws Exception {
         super("Scrabble");
 
@@ -84,7 +90,10 @@ public class View extends JFrame{
         setVisible(true);
     }
 
-    // Initialize players
+    /**
+     * Builds a list of players and their names from user input.
+     * Number of players is chosen by option button pane.
+     */
     public ArrayList<String> buildPlayers() {
         players.clear();
         String[] options = {"2", "3", "4"};
@@ -105,6 +114,12 @@ public class View extends JFrame{
         return players;
     }
 
+    /**
+     * Builds player panel, holding information of each player
+     * Score and name are displayed here.
+     *
+     * @param players List of players to be added to score panel
+     */
     public void buildPlayerNamePanel(ArrayList<String> players) {
         scorePanel = new JPanel();
         scorePanel.setLayout(new BoxLayout(scorePanel, BoxLayout.Y_AXIS));
@@ -125,6 +140,10 @@ public class View extends JFrame{
 
 
     }
+    /**
+     * Builds panel for tile bag information to be displayed.
+     * Shows remaining tiles in bag to be drawn.
+     */
     public void buildTileBagPanel() {
         tilebagPanel = new JPanel();
         tilebagPanel.setLayout(new BoxLayout(tilebagPanel, BoxLayout.X_AXIS));
@@ -137,6 +156,13 @@ public class View extends JFrame{
         tilebagPanel.add(tileTotal);
 
     }
+    /**
+     * Builds the player's rack in display.
+     * Buttons are used for each tile in hand to play on board.
+     * Displays which player's turn it is
+     *
+     * @param player player whose turn it is, and to display rack of
+     */
     public void buildPlayerTilesPanel(Player player) {
         playerTilePanel = new JPanel();
         playerTilePanel.setLayout(new BoxLayout(playerTilePanel, BoxLayout.X_AXIS));
@@ -150,7 +176,11 @@ public class View extends JFrame{
         }
     }
 
-    // For model when player makes a move
+    /**
+     * Update method for player's tiles in hand
+     *
+     * @param player current turn player to display
+     */
     public void updatePlayerTiles(Player player) {
         turn.setText(player.getName() + "'s Turn");
 
@@ -166,15 +196,23 @@ public class View extends JFrame{
 
     }
 
+    /**
+     * Updates number of tiles left in bag
+     */
     public void updateTileBagPanel() {
         tileTotal.setText(String.valueOf(game.getTileBag().remainingTiles()));
     }
+    /**
+     * Updates all player's score
+     */
     public void updateScore(int playerIndex, int newScore) {
         scoreFields.get(playerIndex).setText(String.valueOf(newScore));
     }
 
 
-
+    /**
+     * Getters and Setters
+     */
     public JButton[][] getBoard() { return boardButtons; }
     public JButton getPlayButton() { return playButton; }
     public JButton getSwapButton() { return swapButton; }
