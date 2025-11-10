@@ -245,9 +245,7 @@ public class Game {
         return players;
     }
 
-    public Board getBoard() {
-        return board;
-    }
+    public Board getBoard() {return board;}
 
     public TileBag getTileBag() {
         return tileBag;

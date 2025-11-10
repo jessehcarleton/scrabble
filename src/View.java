@@ -5,7 +5,7 @@ import java.util.ArrayList;
  * View class that handles the look of the game.
  *
  */
-public class View extends JFrame{
+public class View extends JFrame implements gameListener{
     private  Dictionary dictionary;
     private Game game;
     private JButton[][] boardButtons;
