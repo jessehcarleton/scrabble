@@ -142,4 +142,19 @@ public class Player {
     }
 
 
+    /**
+     * Returns a list of tiles from the player's rack at the specified indices.
+     *
+     * @param indices the list of indices to retrieve tiles from
+     * @return a list of Tile objects at the given indices
+     */
+    public List<Tile> getTilesAtIndices(List<Integer> indices) {
+        List<Tile> selectedTiles = new ArrayList<>();
+        for (int index : indices) {
+            if (index >= 0 && index < rack.size()) {
+                selectedTiles.add(rack.get(index));
+            }
+        }
+        return selectedTiles;
+    }
 }

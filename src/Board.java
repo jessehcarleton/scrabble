@@ -1,4 +1,5 @@
 /**
+ *
  * Represents the Scrabble board as a 15x15 grid.
  * Handles word placement and board display.
  */
