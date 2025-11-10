@@ -1,7 +1,6 @@
 /**
- *
  * Represents the Scrabble board as a 15x15 grid.
- * Handles word placement and board display.
+ * Handles word placement, tile access, and board display.
  */
 public class Board {
     private Tile[][] grid;
@@ -25,34 +24,28 @@ public class Board {
      * @return true if placement was successful; false otherwise
      */
     public boolean placeWord(String word, int row, int col, boolean horizontal, Player player) {
-        // Check board bounds
         if (horizontal && col + word.length() > 15) return false;
         if (!horizontal && row + word.length() > 15) return false;
 
-        // Check for tile conflicts
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
             Tile existing = grid[r][c];
             if (existing != null && existing.getLetter() != word.charAt(i)) {
-                return false; // Conflict with existing tile
+                return false;
             }
         }
 
-        // Check adjacency to existing tiles (unless it's the first move)
         boolean connectsToExistingTile = false;
-
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
 
-            // Reuse existing tile
             if (grid[r][c] != null) {
                 connectsToExistingTile = true;
                 break;
             }
 
-            // Check adjacent tiles (up, down, left, right)
             if ((r > 0 && grid[r - 1][c] != null) ||
                     (r < 14 && grid[r + 1][c] != null) ||
                     (c > 0 && grid[r][c - 1] != null) ||
@@ -61,29 +54,71 @@ public class Board {
             }
         }
 
-        // Reject if no connection and not first move
         if (!connectsToExistingTile && !isFirstMove()) {
             System.out.println("Word must connect to existing tiles.");
             return false;
         }
 
-        // Place tiles and consume from rack
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
             if (grid[r][c] == null) {
                 Tile tile = player.findTileInRack(word.charAt(i));
-                if (tile == null) return false; // Player doesn't have required tile
+                if (tile == null) return false;
                 grid[r][c] = tile;
                 player.getRack().remove(tile);
             }
         }
 
-        // Update score
         int score = calculateScore(word);
         player.addScore(score);
         return true;
     }
+
+    /**
+     * Returns the tile located at the specified row and column on the board.
+     *
+     * @param row the row index (0–14)
+     * @param col the column index (0–14)
+     * @return the Tile at the given position, or null if the cell is empty
+     */
+    public Tile getTileAt(int row, int col) {
+        if (row < 0 || row >= 15 || col < 0 || col >= 15) {
+            return null;
+        }
+        return grid[row][col];
+    }
+
+    /**
+     * Sets a tile at the specified position on the board.
+     * Useful for testing or manual placement.
+     *
+     * @param tile the Tile to place
+     * @param row the row index (0–14)
+     * @param col the column index (0–14)
+     */
+    public void setTileAt(Tile tile, int row, int col) {
+        if (row >= 0 && row < 15 && col >= 0 && col < 15) {
+            grid[row][col] = tile;
+        }
+    }
+
+    /**
+     * Checks if the board is empty, indicating it's the first move of the game.
+     *
+     * @return true if no tiles are placed yet; false otherwise
+     */
+    public boolean isFirstMove() {
+        for (int r = 0; r < 15; r++) {
+            for (int c = 0; c < 15; c++) {
+                if (grid[r][c] != null) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /**
      * Prints the current state of the board to the console.
      * Empty tiles are shown as dots (.), placed tiles show their letters.
@@ -99,22 +134,7 @@ public class Board {
             System.out.println();
         }
     }
-    /**
-     * Checks if the board is empty, indicating it's the first move of the game.
-     * Used to allow the first word to be placed without adjacency constraints.
-     *
-     * @return true if no tiles are placed yet; false otherwise
-     */
-    public boolean isFirstMove() {
-        for (int r = 0; r < 15; r++) {
-            for (int c = 0; c < 15; c++) {
-                if (grid[r][c] != null) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+
     /**
      * Calculates the score for a word based on tile points.
      * Does not yet account for premium squares.
@@ -131,15 +151,15 @@ public class Board {
     }
 
     /**
-     * Returns the point value for a given letter.
-     * Uses standard Scrabble scoring.
+     * Returns the point value for a given letter using standard Scrabble scoring.
      *
      * @param letter the letter to score
      * @return the point value
      */
     private int getTilePoints(char letter) {
         switch (letter) {
-            case 'A': case 'E': case 'I': case 'O': case 'U': case 'L': case 'N': case 'S': case 'T': case 'R': return 1;
+            case 'A': case 'E': case 'I': case 'O': case 'U':
+            case 'L': case 'N': case 'S': case 'T': case 'R': return 1;
             case 'D': case 'G': return 2;
             case 'B': case 'C': case 'M': case 'P': return 3;
             case 'F': case 'H': case 'V': case 'W': case 'Y': return 4;

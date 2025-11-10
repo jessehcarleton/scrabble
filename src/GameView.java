@@ -1,11 +1,11 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.List;
 
 /**
  * GameView is the graphical user interface (GUI) component of the Scrabble game.
  * It displays the board, player rack, score, and interactive buttons.
+ * Users can select tiles from their rack and place them on the board by clicking.
  * This class follows the MVC pattern and communicates with GameController.
  */
 public class GameView extends JFrame {
@@ -18,6 +18,10 @@ public class GameView extends JFrame {
     private JButton placeButton;
     private JButton swapButton;
     private JButton passButton;
+
+    private Tile selectedTile = null;
+    private JButton selectedRackButton = null;
+    private JButton[][] tileButtons = new JButton[15][15];
 
     /**
      * Constructs the GameView window and initializes all GUI components.
@@ -65,6 +69,28 @@ public class GameView extends JFrame {
             for (int col = 0; col < 15; col++) {
                 JButton tile = new JButton("");
                 tile.setPreferredSize(new Dimension(40, 40));
+                tileButtons[row][col] = tile;
+
+                final int r = row;
+                final int c = col;
+
+                tile.addActionListener(e -> {
+                    if (selectedTile != null) {
+                        // Enforce first move at center
+                        if (controller.getGame().getBoard().isFirstMove() && !(r == 7 && c == 7)) {
+                            showError("First tile must be placed at center (H8).");
+                            return;
+                        }
+
+                        controller.getGame().getBoard().setTileAt(selectedTile, r, c);
+                        controller.getGame().getCurrentPlayer().getRack().remove(selectedTile);
+                        selectedRackButton.setEnabled(false);
+                        selectedTile = null;
+                        selectedRackButton = null;
+                        renderGameState(controller.getGame());
+                    }
+                });
+
                 boardPanel.add(tile);
             }
         }
@@ -89,10 +115,10 @@ public class GameView extends JFrame {
 
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // Button listeners (to be wired to controller)
+        // Button listeners (optional for future logic)
         placeButton.addActionListener(e -> {
-            // Example placeholder — replace with dialog input
-            controller.handlePlaceWord("HELLO", 7, 7, true);
+            // Placeholder: could open a dialog or finalize placement
+            showError("Use rack and board clicks to place tiles.");
         });
 
         swapButton.addActionListener(e -> {
@@ -122,15 +148,28 @@ public class GameView extends JFrame {
         playerLabel.setText("Player: " + current.getName());
         scoreLabel.setText("Score: " + current.getScore());
 
+        // Render rack
         rackPanel.removeAll();
         for (Tile t : current.getRack()) {
             JButton tileButton = new JButton(String.valueOf(t.getLetter()));
+            tileButton.setPreferredSize(new Dimension(40, 40));
+            tileButton.addActionListener(e -> {
+                selectedTile = t;
+                selectedRackButton = tileButton;
+            });
             rackPanel.add(tileButton);
         }
         rackPanel.revalidate();
         rackPanel.repaint();
 
-        // TODO: render board tiles from game.getBoard()
+        // Render board
+        Board board = game.getBoard();
+        for (int row = 0; row < 15; row++) {
+            for (int col = 0; col < 15; col++) {
+                Tile tile = board.getTileAt(row, col);
+                tileButtons[row][col].setText(tile == null ? "" : String.valueOf(tile.getLetter()));
+            }
+        }
     }
 
     /**
@@ -139,14 +178,5 @@ public class GameView extends JFrame {
      */
     public void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
-    }
-
-    /**
-     * Swaps selected tiles from the player's rack.
-     * @param player the current player
-     * @param indices the indices of tiles to swap
-     */
-    public void swapTiles(Player player, List<Integer> indices) {
-        // TODO: implement tile swap logic or delegate to controller
     }
 }

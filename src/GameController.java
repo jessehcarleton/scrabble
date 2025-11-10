@@ -78,4 +78,12 @@ public class GameController {
         game.nextPlayer();
         view.renderGameState(game);
     }
+    /**
+     * Returns the current Game model managed by this controller.
+     *
+     * @return the Game instance
+     */
+    public Game getGame() {
+        return game;
+    }
 }

@@ -258,4 +258,13 @@ public class Game {
     public int getCurrentPlayerIndex() {
         return currentPlayerIndex;
     }
+
+    /**
+     * Returns the player whose turn it currently is.
+     *
+     * @return the current Player
+     */
+    public Player getCurrentPlayer() {
+        return this.players.get(currentPlayerIndex);
+    }
 }
