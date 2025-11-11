@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.List;
 
 /**
  * GameView is the graphical user interface (GUI) component of the Scrabble game.
@@ -19,8 +20,11 @@ public class GameView extends JFrame {
     private JButton swapButton;
     private JButton passButton;
 
+    // Interaction state
     private Tile selectedTile = null;
     private JButton selectedRackButton = null;
+
+    // Board buttons for rendering
     private JButton[][] tileButtons = new JButton[15][15];
 
     /**
@@ -49,8 +53,8 @@ public class GameView extends JFrame {
         topPanel.add(scoreLabel);
         add(topPanel, BorderLayout.NORTH);
 
-        // Center panel for board with labels
-        boardPanel = new JPanel(new GridLayout(16, 16)); // 15x15 board + labels
+        // Center panel for board with labels (16x16: labels + 15x15 grid)
+        boardPanel = new JPanel(new GridLayout(16, 16));
 
         // Top-left corner (empty)
         boardPanel.add(new JLabel(""));
@@ -58,40 +62,60 @@ public class GameView extends JFrame {
         // Column labels A–O
         for (int col = 0; col < 15; col++) {
             JLabel label = new JLabel(String.valueOf((char) ('A' + col)), SwingConstants.CENTER);
+            label.setFont(new Font("Arial", Font.BOLD, 12));
             boardPanel.add(label);
         }
 
         // Rows with row labels and tile buttons
         for (int row = 0; row < 15; row++) {
             JLabel rowLabel = new JLabel(String.valueOf(row + 1), SwingConstants.CENTER);
+            rowLabel.setFont(new Font("Arial", Font.BOLD, 12));
             boardPanel.add(rowLabel);
 
             for (int col = 0; col < 15; col++) {
-                JButton tile = new JButton("");
-                tile.setPreferredSize(new Dimension(40, 40));
-                tileButtons[row][col] = tile;
+                JButton tileBtn = new JButton("");
+                tileBtn.setPreferredSize(new Dimension(40, 40));
+                tileBtn.setFont(new Font("Arial", Font.BOLD, 16));
+                tileButtons[row][col] = tileBtn;
 
                 final int r = row;
                 final int c = col;
 
-                tile.addActionListener(e -> {
-                    if (selectedTile != null) {
-                        // Enforce first move at center
-                        if (controller.getGame().getBoard().isFirstMove() && !(r == 7 && c == 7)) {
-                            showError("First tile must be placed at center (H8).");
-                            return;
-                        }
-
-                        controller.getGame().getBoard().setTileAt(selectedTile, r, c);
-                        controller.getGame().getCurrentPlayer().getRack().remove(selectedTile);
-                        selectedRackButton.setEnabled(false);
-                        selectedTile = null;
-                        selectedRackButton = null;
-                        renderGameState(controller.getGame());
+                tileBtn.addActionListener(e -> {
+                    if (controller == null || controller.getGame() == null) {
+                        showError("Game is not initialized.");
+                        return;
                     }
+                    if (selectedTile == null) {
+                        // No tile selected from rack
+                        return;
+                    }
+                    // Example rule: center enforcement for first placement, if your Board supports it
+                    Board board = controller.getGame().getBoard();
+                    if (board != null && board.isFirstMove() && !(r == 7 && c == 7)) {
+                        showError("First tile must be placed at center (H8).");
+                        return;
+                    }
+
+                    // Place on board and remove from rack
+                    board.setTileAt(selectedTile, r, c);
+                    controller.getGame().getCurrentPlayer().getRack().remove(selectedTile);
+
+                    // Disable the rack button to show it's used
+                    if (selectedRackButton != null) {
+                        selectedRackButton.setEnabled(false);
+                        selectedRackButton.setBackground(null);
+                    }
+
+                    // Clear selection
+                    selectedTile = null;
+                    selectedRackButton = null;
+
+                    // Re-render
+                    renderGameState(controller.getGame());
                 });
 
-                boardPanel.add(tile);
+                boardPanel.add(tileBtn);
             }
         }
 
@@ -100,7 +124,7 @@ public class GameView extends JFrame {
         // Bottom panel for rack and buttons
         JPanel bottomPanel = new JPanel(new BorderLayout());
 
-        rackPanel = new JPanel(new FlowLayout());
+        rackPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
         bottomPanel.add(rackPanel, BorderLayout.NORTH);
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -115,18 +139,21 @@ public class GameView extends JFrame {
 
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // Button listeners (optional for future logic)
+        // Button listeners (wire as needed)
         placeButton.addActionListener(e -> {
-            // Placeholder: could open a dialog or finalize placement
             showError("Use rack and board clicks to place tiles.");
         });
 
         swapButton.addActionListener(e -> {
-            controller.handleSwapTiles(java.util.Arrays.asList(0, 2)); // Java 8 compatible
+            if (controller != null) {
+                controller.handleSwapTiles(java.util.Arrays.asList(0, 2));
+            }
         });
 
         passButton.addActionListener(e -> {
-            controller.handlePassTurn();
+            if (controller != null) {
+                controller.handlePassTurn();
+            }
         });
     }
 
@@ -144,25 +171,34 @@ public class GameView extends JFrame {
      * @param game the current Game model
      */
     public void renderGameState(Game game) {
+        if (game == null) return;
+
         Player current = game.getPlayers().get(game.getCurrentPlayerIndex());
         playerLabel.setText("Player: " + current.getName());
         scoreLabel.setText("Score: " + current.getScore());
 
-        // Render rack
+        // Render rack (use String.valueOf to reliably show char letters)
         rackPanel.removeAll();
         for (Tile t : current.getRack()) {
             JButton tileButton = new JButton(String.valueOf(t.getLetter()));
-            tileButton.setPreferredSize(new Dimension(40, 40));
+            tileButton.setPreferredSize(new Dimension(50, 50));
+            tileButton.setFont(new Font("Arial", Font.BOLD, 16));
             tileButton.addActionListener(e -> {
+                // Set selection and highlight
                 selectedTile = t;
+
+                if (selectedRackButton != null && selectedRackButton != tileButton) {
+                    selectedRackButton.setBackground(null);
+                }
                 selectedRackButton = tileButton;
+                tileButton.setBackground(Color.YELLOW);
             });
             rackPanel.add(tileButton);
         }
         rackPanel.revalidate();
         rackPanel.repaint();
 
-        // Render board
+        // Render board from the model
         Board board = game.getBoard();
         for (int row = 0; row < 15; row++) {
             for (int col = 0; col < 15; col++) {
@@ -178,5 +214,14 @@ public class GameView extends JFrame {
      */
     public void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    /**
+     * Swaps selected tiles from the player's rack.
+     * @param player the current player
+     * @param indices the indices of tiles to swap
+     */
+    public void swapTiles(Player player, List<Integer> indices) {
+        // TODO: implement tile swap logic or delegate to controller
     }
 }

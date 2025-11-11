@@ -23,7 +23,7 @@ public class Tile {
      * @return the tile's letter
      */
     public char getLetter() {
-        return letter;
+        return this.letter;
     }
 
     /**
