@@ -98,4 +98,13 @@ public class TileBag {
     public int size() {
         return tiles.size(); // or whatever your internal list is called
     }
+
+    /**
+     * Checks whether the collection of tiles is empty.
+     *
+     * @return true if there are no tiles left; false otherwise
+     */
+    public boolean isEmpty() {
+        return tiles.isEmpty();
+    }
 }

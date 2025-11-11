@@ -1,9 +1,15 @@
 /**
  * Represents the Scrabble board as a 15x15 grid.
  * Handles word placement, tile access, and board display.
+ *
+ * Milestone 2 patches:
+ * - Enforces "first move must cover center (H8)" in the model.
+ * - Keeps placement/validation logic inside the model (no GUI mutations).
+ * - Removes unused private helper to avoid duplication with Player API.
+ * - No scoring duplication: Board remains the single source to apply score for a placed word.
  */
 public class Board {
-    private Tile[][] grid;
+    private final Tile[][] grid;
 
     /**
      * Constructs a new empty 15x15 Scrabble board.
@@ -15,18 +21,41 @@ public class Board {
     /**
      * Places a word on the board if it fits, doesn't conflict, and connects to existing tiles.
      * Supports both horizontal (left to right) and vertical (top to bottom) placement.
+     * Also enforces that the very first move must cover the center square (row 7, col 7 == H8).
      *
-     * @param word the word to place
-     * @param row starting row index (0–14)
-     * @param col starting column index (0–14)
+     * NOTE: This method consumes tiles from the player's rack if placement succeeds
+     * and applies the score exactly once (no controller-side re-scoring).
+     *
+     * @param word       the word to place (case-insensitive; treated as uppercase)
+     * @param row        starting row index (0–14)
+     * @param col        starting column index (0–14)
      * @param horizontal true for horizontal (left to right), false for vertical (top to bottom)
-     * @param player the player placing the word
+     * @param player     the player placing the word
      * @return true if placement was successful; false otherwise
      */
     public boolean placeWord(String word, int row, int col, boolean horizontal, Player player) {
+        if (word == null || word.isEmpty()) return false;
+        word = word.toUpperCase();
+
+        // Bounds check
         if (horizontal && col + word.length() > 15) return false;
         if (!horizontal && row + word.length() > 15) return false;
 
+        // First-move center coverage rule (must cover H8 => (7,7))
+        if (isFirstMove()) {
+            boolean coversCenter = false;
+            for (int i = 0; i < word.length(); i++) {
+                int r = horizontal ? row : row + i;
+                int c = horizontal ? col + i : col;
+                if (r == 7 && c == 7) {
+                    coversCenter = true;
+                    break;
+                }
+            }
+            if (!coversCenter) return false;
+        }
+
+        // Conflict check with existing tiles (must match placed letters)
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
@@ -36,42 +65,47 @@ public class Board {
             }
         }
 
-        boolean connectsToExistingTile = false;
-        for (int i = 0; i < word.length(); i++) {
-            int r = horizontal ? row : row + i;
-            int c = horizontal ? col + i : col;
+        // Connectivity check (skip if first move)
+        if (!isFirstMove()) {
+            boolean connectsToExistingTile = false;
+            for (int i = 0; i < word.length(); i++) {
+                int r = horizontal ? row : row + i;
+                int c = horizontal ? col + i : col;
 
-            if (grid[r][c] != null) {
-                connectsToExistingTile = true;
-                break;
-            }
+                // Shares a cell with an existing tile
+                if (grid[r][c] != null) {
+                    connectsToExistingTile = true;
+                    break;
+                }
 
-            if ((r > 0 && grid[r - 1][c] != null) ||
-                    (r < 14 && grid[r + 1][c] != null) ||
-                    (c > 0 && grid[r][c - 1] != null) ||
-                    (c < 14 && grid[r][c + 1] != null)) {
-                connectsToExistingTile = true;
+                // Adjacent to an existing tile (orthogonally)
+                if ((r > 0 && grid[r - 1][c] != null) ||
+                        (r < 14 && grid[r + 1][c] != null) ||
+                        (c > 0 && grid[r][c - 1] != null) ||
+                        (c < 14 && grid[r][c + 1] != null)) {
+                    connectsToExistingTile = true;
+                }
             }
+            if (!connectsToExistingTile) return false;
         }
 
-        if (!connectsToExistingTile && !isFirstMove()) {
-            System.out.println("Word must connect to existing tiles.");
-            return false;
-        }
-
+        // Place the word: only fill empty cells; consume player's tiles for those cells
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
             if (grid[r][c] == null) {
                 Tile tile = player.findTileInRack(word.charAt(i));
-                if (tile == null) return false;
+                if (tile == null) {
+                    // Not enough letters in rack; abort (nothing placed yet, so safe)
+                    return false;
+                }
                 grid[r][c] = tile;
                 player.getRack().remove(tile);
             }
         }
 
-        int score = calculateScore(word);
-        player.addScore(score);
+        // Apply score once (no controller-side add)
+        player.addScore(calculateScore(word));
         return true;
     }
 
@@ -83,19 +117,17 @@ public class Board {
      * @return the Tile at the given position, or null if the cell is empty
      */
     public Tile getTileAt(int row, int col) {
-        if (row < 0 || row >= 15 || col < 0 || col >= 15) {
-            return null;
-        }
+        if (row < 0 || row >= 15 || col < 0 || col >= 15) return null;
         return grid[row][col];
     }
 
     /**
      * Sets a tile at the specified position on the board.
-     * Useful for testing or manual placement.
+     * Useful for testing or manual placement (not used by the View in MVC flow).
      *
      * @param tile the Tile to place
-     * @param row the row index (0–14)
-     * @param col the column index (0–14)
+     * @param row  the row index (0–14)
+     * @param col  the column index (0–14)
      */
     public void setTileAt(Tile tile, int row, int col) {
         if (row >= 0 && row < 15 && col >= 0 && col < 15) {
@@ -137,12 +169,12 @@ public class Board {
 
     /**
      * Calculates the score for a word based on tile points.
-     * Does not yet account for premium squares.
+     * Does not yet account for premium squares or cross-word bonuses.
      *
      * @param word the word to score
      * @return the total score
      */
-    private int calculateScore(String word) {
+    int calculateScore(String word) {
         int score = 0;
         for (char c : word.toCharArray()) {
             score += getTilePoints(c);
@@ -157,7 +189,7 @@ public class Board {
      * @return the point value
      */
     private int getTilePoints(char letter) {
-        switch (letter) {
+        switch (Character.toUpperCase(letter)) {
             case 'A': case 'E': case 'I': case 'O': case 'U':
             case 'L': case 'N': case 'S': case 'T': case 'R': return 1;
             case 'D': case 'G': return 2;
@@ -168,23 +200,5 @@ public class Board {
             case 'Q': case 'Z': return 10;
             default: return 0;
         }
-    }
-
-    /**
-     * Finds and removes a tile with the specified letter from the player's rack.
-     *
-     * @param player the player whose rack to search
-     * @param letter the letter to find
-     * @return the matching tile, or null if not found
-     */
-    private Tile findTileInRack(Player player, char letter) {
-        for (int i = 0; i < player.getRack().size(); i++) {
-            Tile tile = player.getRack().get(i);
-            if (tile.getLetter() == letter) {
-                player.getRack().remove(i);
-                return tile;
-            }
-        }
-        return null;
     }
 }

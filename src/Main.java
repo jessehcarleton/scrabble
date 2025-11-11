@@ -1,12 +1,31 @@
 import javax.swing.*;
 
 /**
- * Entry point for the Scrabble game.
- * Prompts for number of players (2–4), collects player names via dialog,
- * and launches the GUI using MVC architecture.
+ * Application entry point for the Scrabble game.
+ *
+ * Milestone 2 patches:
+ * - Load the Dictionary (network I/O) BEFORE entering the Swing Event Dispatch Thread
+ *   to avoid freezing the UI while fetching the word list.
+ * - Create and wire MVC on the EDT after resources are ready.
  */
 public class Main {
     public static void main(String[] args) {
+        // Load dictionary outside EDT to avoid UI freeze.
+        Dictionary dictionary;
+        try {
+            dictionary = new Dictionary();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Failed to load dictionary: " + e.getMessage(),
+                    "Initialization Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        Dictionary readyDictionary = dictionary;
+
         SwingUtilities.invokeLater(() -> {
             try {
                 // Prompt for number of players
@@ -20,14 +39,13 @@ public class Main {
                         options,
                         options[0]
                 );
-
                 if (selected == null) return; // user cancelled
                 int numPlayers = Integer.parseInt(selected);
 
-                // Prompt for player names
-                Dictionary dictionary = new Dictionary();
-                Game game = new Game(dictionary);
+                // Create model with ready dictionary
+                Game game = new Game(readyDictionary);
 
+                // Prompt for player names
                 for (int i = 1; i <= numPlayers; i++) {
                     String name = JOptionPane.showInputDialog(
                             null,
@@ -41,15 +59,16 @@ public class Main {
                     game.addPlayer(name.trim());
                 }
 
-                // Launch GUI and controller
+                // Construct View and Controller
                 GameView view = new GameView();
-                GameController controller = new GameController(game, view);
-
+                new GameController(game, view);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(null,
-                        "Error initializing game: " + e.getMessage(),
-                        "Initialization Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Error starting game: " + e.getMessage(),
+                        "Startup Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
             }
         });
     }
