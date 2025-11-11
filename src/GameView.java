@@ -7,20 +7,15 @@ import java.util.List;
 /**
  * GameView is the GUI component of the Scrabble game.
  * It displays the board, player rack, score, and interactive controls.
- * <p>
- * Interaction model (Milestone 2 upgrade):
- * <ul>
- *   <li>Players select a rack tile, then click board cells to stage a placement (no free-typing).</li>
- *   <li>Orientation is chosen via radio buttons (Horizontal/Vertical). All staged drops must align.</li>
- *   <li>Staged letters are previewed on the board (ghost). Nothing is committed to the Model until "Commit Move".</li>
- *   <li>"Clear Move" removes the preview and re-enables rack tiles.</li>
- * </ul>
- * <p>
- * MVC compliance:
- * <ul>
- *   <li>This view never mutates the underlying model (no direct board or rack mutation).</li>
- *   <li>All intent is forwarded to the controller, which validates and updates the model.</li>
- * </ul>
+ *
+ * Interaction model:
+ * - Players click a rack tile to select it, then click board cells to stage placement.
+ * - Orientation is chosen via radio buttons (Horizontal/Vertical). All staged drops must align.
+ * - Staged letters are previewed (ghost) until "Commit Move" is pressed.
+ * - "Clear Move" removes the preview and re-enables rack tiles.
+ *
+ * MVC:
+ * - This view never mutates the model directly; it forwards intents to the controller.
  */
 public class GameView extends JFrame {
     /** Controller mediator (set after construction). */
@@ -46,35 +41,39 @@ public class GameView extends JFrame {
     private JRadioButton horizontalRadio;
     private JRadioButton verticalRadio;
 
-    // Board buttons for rendering + preview (no direct mutation to model)
+    // Board buttons (display + preview only; no model mutation here)
     private final JButton[][] tileButtons = new JButton[15][15];
 
     // ---------- Pending placement state (View-only buffer) ----------
-    /** Pending letters preview; 0 char means empty (no pending). */
+    /** Pending letters preview; 0 char means empty. */
     private final char[][] pendingLetters = new char[15][15];
-
-    /** Ordered list of pending cell positions chosen by the user (for visual management). */
+    /** Ordered list of pending cells for convenience. Stores points as (x=col, y=row). */
     private final List<Point> pendingCells = new ArrayList<>();
 
-    /** Rack buttons, so we can disable/enable as tiles are used/cleared. */
+    /** Rack buttons so we can disable/enable during staging. */
     private final List<JButton> rackButtons = new ArrayList<>();
-
-    /** Mapping from rack-button index to the Tile (letter, points). */
+    /** Snapshot of the rack's tiles to read letters/points without touching model. */
     private final List<Tile> rackSnapshot = new ArrayList<>();
 
-    /** Which rack tile (index in rackButtons/rackSnapshot) is currently selected to place. -1 means none. */
+    /** Selected rack tile index; -1 means none. */
     private int selectedRackIndex = -1;
-
-    /** For quick access to letter on selected rack tile; kept in sync with selectedRackIndex. */
+    /** Selected rack tile letter (cached). */
     private Character selectedRackLetter = null;
+
+    // ---------- UI size constants (bigger tiles) ----------
+    private static final Dimension BOARD_CELL_SIZE = new Dimension(52, 52);
+    private static final float BOARD_FONT_SIZE = 22f;
+    private static final Dimension RACK_TILE_SIZE = new Dimension(72, 72);
+    private static final float RACK_FONT_SIZE = 28f; // used as fallback if HTML not honored
 
     /**
      * Constructs the GameView window and initializes all GUI components.
-     * Sets size, layout, and centers the window on screen.
+     * Enlarges the window to fit bigger cells and rack tiles.
      */
     public GameView() {
         setTitle("Scrabble Game");
-        setSize(1100, 800);
+        setSize(1280, 900);
+        setMinimumSize(new Dimension(1100, 800));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         initComponents();
@@ -83,15 +82,11 @@ public class GameView extends JFrame {
     }
 
     /**
-     * Initializes and lays out all GUI components, including:
-     * <ul>
-     *   <li>Top info bar (player, score, bag, status)</li>
-     *   <li>Board grid with coordinate labels (16x16: labels + 15x15 board)</li>
-     *   <li>Rack panel</li>
-     *   <li>Controls panel with orientation + action buttons</li>
-     * </ul>
-     * Also wires the event listeners for commit/clear/swap/pass actions
-     * and for board cell clicks. Board buttons are display-only—no model mutation here.
+     * Initializes all GUI components and listeners.
+     * - Top info bar (player, score, bag, status)
+     * - Board grid with coordinate labels (16x16 with header/side labels)
+     * - Rack panel
+     * - Controls panel with orientation + action buttons
      */
     private void initComponents() {
         // Top panel: player info and score
@@ -107,24 +102,25 @@ public class GameView extends JFrame {
         topPanel.add(statusLabel);
         add(topPanel, BorderLayout.NORTH);
 
-        // Center: Board with coordinate labels (16x16 grid: +1 row and +1 col for labels)
-        boardPanel = new JPanel(new GridLayout(16, 16));
-        boardPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        // Center: Board with coordinate labels (16x16 grid)
+        boardPanel = new JPanel(new GridLayout(16, 16, 4, 4));
+        boardPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        boardPanel.setBackground(new Color(245, 245, 245));
 
-        // Top-left corner empty
+        // Top-left corner (empty)
         boardPanel.add(new JLabel(""));
 
         // Column labels A..O
         for (int col = 0; col < 15; col++) {
             JLabel label = new JLabel(String.valueOf((char) ('A' + col)), SwingConstants.CENTER);
-            label.setFont(label.getFont().deriveFont(Font.BOLD));
+            label.setFont(label.getFont().deriveFont(Font.BOLD, 14f));
             boardPanel.add(label);
         }
 
         // Rows with row labels and tile buttons
         for (int row = 0; row < 15; row++) {
             JLabel rowLabel = new JLabel(String.valueOf(row + 1), SwingConstants.CENTER);
-            rowLabel.setFont(rowLabel.getFont().deriveFont(Font.BOLD));
+            rowLabel.setFont(rowLabel.getFont().deriveFont(Font.BOLD, 14f));
             boardPanel.add(rowLabel);
 
             for (int col = 0; col < 15; col++) {
@@ -132,16 +128,20 @@ public class GameView extends JFrame {
                 final int c = col;
 
                 JButton t = new JButton("");
-                t.setPreferredSize(new Dimension(70, 70));
-                t.setFont(t.getFont().deriveFont(Font.BOLD, 14f));
+                t.setPreferredSize(BOARD_CELL_SIZE);
+                t.setMinimumSize(BOARD_CELL_SIZE);
+                t.setMaximumSize(BOARD_CELL_SIZE);
+                t.setMargin(new Insets(0, 0, 0, 0));
                 t.setFocusPainted(false);
+                t.setContentAreaFilled(true);
+                t.setOpaque(true);
+                t.setFont(t.getFont().deriveFont(Font.BOLD, BOARD_FONT_SIZE));
+                t.setHorizontalTextPosition(SwingConstants.CENTER);
 
-                // Visual hint for center
                 if (row == 7 && col == 7) {
-                    t.setBorder(BorderFactory.createLineBorder(Color.ORANGE, 2));
+                    t.setBorder(BorderFactory.createLineBorder(new Color(255, 140, 0), 2));
                 }
 
-                // Board cell click: stage a drop of the currently selected rack tile (preview only)
                 t.addActionListener(ev -> onBoardCellClicked(r, c));
 
                 tileButtons[row][col] = t;
@@ -153,21 +153,19 @@ public class GameView extends JFrame {
         // Bottom: Rack and controls
         JPanel bottomPanel = new JPanel(new BorderLayout());
 
-        // Rack panel
-        rackPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
+        rackPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         rackPanel.setBorder(BorderFactory.createTitledBorder("Your Rack (click to select; click board to drop)"));
         bottomPanel.add(rackPanel, BorderLayout.NORTH);
 
-        // Controls panel
         JPanel controls = new JPanel(new GridBagLayout());
         controls.setBorder(BorderFactory.createTitledBorder("Turn Controls"));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(6, 8, 6, 8);
         gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
 
         controls.add(new JLabel("Orientation:"), gbc);
         gbc.gridx = 1;
-        JPanel orientPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        JPanel orientPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         horizontalRadio = new JRadioButton("Horizontal", true);
         verticalRadio = new JRadioButton("Vertical");
         ButtonGroup group = new ButtonGroup();
@@ -178,11 +176,18 @@ public class GameView extends JFrame {
         controls.add(orientPanel, gbc);
 
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 2;
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
         commitButton = new JButton("Commit Move");
         clearButton = new JButton("Clear Move");
         swapButton = new JButton("Swap Tiles");
         passButton = new JButton("Pass Turn");
+
+        Dimension actionSize = new Dimension(150, 36);
+        for (JButton b : new JButton[]{commitButton, clearButton, swapButton, passButton}) {
+            b.setPreferredSize(actionSize);
+            b.setFocusPainted(false);
+        }
+
         buttonsPanel.add(commitButton);
         buttonsPanel.add(clearButton);
         buttonsPanel.add(swapButton);
@@ -210,19 +215,13 @@ public class GameView extends JFrame {
 
     /**
      * Re-renders the view to reflect the current game state.
-     * <ul>
-     *   <li>Clears any staged/pending placement (since a new state is shown).</li>
-     *   <li>Updates labels (player, score, tiles in bag, status).</li>
-     *   <li>Rebuilds rack buttons for the active player.</li>
-     *   <li>Paints the board from the model (existing placed tiles only).</li>
-     * </ul>
+     * Clears staged placements, updates labels, rebuilds rack, and paints the board.
      *
-     * @param game the current Game model (must not be null)
+     * @param game the current Game model
      */
     public void renderGameState(Game game) {
         if (game == null) return;
 
-        // Reset pending when the game state re-renders (e.g., after a commit or pass)
         clearPendingPlacement();
 
         Player current = game.getPlayers().get(game.getCurrentPlayerIndex());
@@ -231,10 +230,8 @@ public class GameView extends JFrame {
         bagLabel.setText("Tiles in bag: " + game.getTileBag().remainingTiles());
         statusLabel.setText("It's " + current.getName() + "'s turn. Select a rack tile, then click cells.");
 
-        // Render rack buttons fresh
         rebuildRackButtons(current);
 
-        // Render board from the model (base letters)
         Board board = game.getBoard();
         for (int row = 0; row < 15; row++) {
             for (int col = 0; col < 15; col++) {
@@ -244,10 +241,15 @@ public class GameView extends JFrame {
                 btn.setBackground(null);
             }
         }
+
+        boardPanel.revalidate();
+        rackPanel.revalidate();
+        boardPanel.repaint();
+        rackPanel.repaint();
     }
 
     /**
-     * Displays an error message to the user and mirrors it in the status bar.
+     * Displays an error dialog and mirrors the message in the status bar.
      *
      * @param message the error message to show
      */
@@ -257,14 +259,11 @@ public class GameView extends JFrame {
     }
 
     /**
-     * Rebuilds the rack UI for the current player.
-     * <ul>
-     *   <li>Creates one button per tile (LETTER-POINTS).</li>
-     *   <li>Wires each button to select that tile for staging onto the board.</li>
-     *   <li>Resets prior selection state and snapshot of the rack.</li>
-     * </ul>
+     * Builds the rack UI for the active player with LARGE buttons and **explicit points shown**:
+     * - Uses Swing HTML text to render a big letter with a small score underneath.
+     * - Also sets a tooltip (LETTER (points)) as a backup.
      *
-     * @param current the active player whose rack should be rendered
+     * @param current the active player
      */
     private void rebuildRackButtons(Player current) {
         rackPanel.removeAll();
@@ -277,32 +276,51 @@ public class GameView extends JFrame {
             Tile t = current.getRack().get(i);
             rackSnapshot.add(t);
 
-            JButton tileButton = new JButton(t.getLetter() + "-" + t.getPoints());
-            tileButton.setPreferredSize(new Dimension(50, 50));
-            tileButton.setFont(tileButton.getFont().deriveFont(Font.BOLD, 16f));
-            final int idx = i;
+            // HTML text: big letter + small points on a new line (centered)
+            String html = "<html><div style='text-align:center;'>"
+                    + "<div style='font-size:28px; font-weight:bold; line-height:28px;'>"
+                    + t.getLetter()
+                    + "</div>"
+                    + "<div style='font-size:12px; line-height:12px;'>"
+                    + t.getPoints()
+                    + "</div></div></html>";
 
+            JButton tileButton = new JButton(html);
+            tileButton.setToolTipText(t.getLetter() + " (" + t.getPoints() + ")");
+            tileButton.setPreferredSize(RACK_TILE_SIZE);
+            tileButton.setMinimumSize(RACK_TILE_SIZE);
+            tileButton.setMaximumSize(RACK_TILE_SIZE);
+            tileButton.setMargin(new Insets(0, 0, 0, 0));
+            tileButton.setFocusPainted(false);
+            tileButton.setContentAreaFilled(true);
+            tileButton.setOpaque(true);
+
+            // Fallback font (in case L&F disables HTML sizing)
+            tileButton.setFont(tileButton.getFont().deriveFont(Font.BOLD, RACK_FONT_SIZE));
+            tileButton.setHorizontalTextPosition(SwingConstants.CENTER);
+
+            final int idx = i;
             tileButton.addActionListener(ev -> onRackTileSelected(idx, tileButton));
+
             rackButtons.add(tileButton);
             rackPanel.add(tileButton);
         }
+
         rackPanel.revalidate();
         rackPanel.repaint();
     }
 
     /**
      * Handles selection of a tile from the player's rack.
-     * Visually highlights the chosen button and stores its letter/index
-     * so it can be staged onto the board on the next cell click.
+     * Highlights the chosen button and stores its letter/index for staging.
      *
      * @param idx index of the selected rack tile
-     * @param btn the JButton that was clicked (for visual highlight)
+     * @param btn the JButton clicked
      */
     private void onRackTileSelected(int idx, JButton btn) {
         if (idx < 0 || idx >= rackSnapshot.size()) return;
         if (!btn.isEnabled()) return;
 
-        // Visual select highlight
         for (JButton b : rackButtons) b.setBackground(null);
         btn.setBackground(new Color(255, 255, 180));
 
@@ -313,17 +331,11 @@ public class GameView extends JFrame {
 
     /**
      * Handles a board cell click to stage a pending tile drop (preview only).
-     * Rules enforced here:
-     * <ul>
-     *   <li>A rack tile must have been selected first.</li>
-     *   <li>Cannot drop on an already occupied model cell.</li>
-     *   <li>All pending cells must align along the chosen orientation (row for H, column for V).</li>
-     *   <li>Cannot place two pending tiles in the same cell.</li>
-     * </ul>
-     * If successful, the cell shows a ghost letter, and the rack button is disabled.
+     * Enforces: a rack tile must be selected, target must be empty in model,
+     * and all staged tiles align to the chosen orientation.
      *
-     * @param r row index of the clicked board cell (0–14)
-     * @param c column index of the clicked board cell (0–14)
+     * @param r row index (0–14)
+     * @param c column index (0–14)
      */
     private void onBoardCellClicked(int r, int c) {
         if (controller == null || controller.getGame() == null) {
@@ -331,20 +343,17 @@ public class GameView extends JFrame {
             return;
         }
 
-        // Must select a rack tile first
         if (selectedRackIndex == -1 || selectedRackLetter == null) {
             statusLabel.setText("Select a rack tile first, then click a board cell.");
             return;
         }
 
-        // If that board cell already has a model tile (occupied), we cannot drop there
         Board board = controller.getGame().getBoard();
         if (board.getTileAt(r, c) != null) {
             statusLabel.setText("That square already has a tile. Choose another square.");
             return;
         }
 
-        // Orientation constraint: all pending cells must share the same row (H) or column (V)
         boolean horizontal = horizontalRadio.isSelected();
         if (!pendingCells.isEmpty()) {
             Point anchor = pendingCells.get(0);
@@ -358,24 +367,21 @@ public class GameView extends JFrame {
             }
         }
 
-        // If we already placed a pending letter here, ignore
         if (pendingLetters[r][c] != 0) {
             statusLabel.setText("You already placed a pending tile there. Choose another square.");
             return;
         }
 
-        // Place as pending preview
         pendingLetters[r][c] = selectedRackLetter;
-        pendingCells.add(new Point(c, r)); // store as (x=col, y=row) for easier sorting
-        tileButtons[r][c].setText(String.valueOf(selectedRackLetter));
-        tileButtons[r][c].setBackground(new Color(200, 240, 255)); // ghost color
+        pendingCells.add(new Point(c, r));
+        JButton cell = tileButtons[r][c];
+        cell.setText(String.valueOf(selectedRackLetter));
+        cell.setBackground(new Color(190, 230, 255));
 
-        // Disable that rack button (consumed for preview)
         JButton rb = rackButtons.get(selectedRackIndex);
         rb.setEnabled(false);
         rb.setBackground(null);
 
-        // Clear current selection (user may pick another rack tile)
         selectedRackIndex = -1;
         selectedRackLetter = null;
         statusLabel.setText("Pending tiles: " + pendingCells.size() + ". Select another rack tile or Commit.");
@@ -383,17 +389,11 @@ public class GameView extends JFrame {
 
     /**
      * Commits the staged move:
-     * <ol>
-     *   <li>Validates that pending tiles exist and align with the selected orientation.</li>
-     *   <li>Builds the contiguous word spanning min..max across the oriented axis,
-     *       ensuring no gaps (every cell in the span is either an existing board tile
-     *       or a newly staged pending tile).</li>
-     *   <li>Delegates placement to the controller (which calls the model). On success, the
-     *       controller re-renders the game state which clears the preview; on failure, the
-     *       preview remains so the user can adjust or clear.</li>
-     * </ol>
+     * - Validates orientation and contiguity (no gaps in the span).
+     * - Builds the word including existing board letters in the span.
+     * - Delegates to the controller to place the word via the model.
      *
-     * @param e the ActionEvent from the "Commit Move" button
+     * @param e action event from "Commit Move"
      */
     private void onCommitMove(ActionEvent e) {
         if (controller == null || controller.getGame() == null) return;
@@ -407,122 +407,93 @@ public class GameView extends JFrame {
         Board board = game.getBoard();
         boolean horizontal = horizontalRadio.isSelected();
 
-        // Determine line (row for horizontal, column for vertical) and span
         int fixedRow = pendingCells.get(0).y;
         int fixedCol = pendingCells.get(0).x;
 
-        // Confirm all aligned on orientation
         for (Point p : pendingCells) {
             if (horizontal && p.y != fixedRow) { showError("Pending tiles not on the same row."); return; }
             if (!horizontal && p.x != fixedCol) { showError("Pending tiles not on the same column."); return; }
         }
 
-        // Determine span: min..max along orientation (we require no gaps)
-        int min, max;
         if (horizontal) {
-            min = 14; max = 0;
+            int min = 14, max = 0;
             for (Point p : pendingCells) { min = Math.min(min, p.x); max = Math.max(max, p.x); }
 
             StringBuilder sb = new StringBuilder();
             for (int c = min; c <= max; c++) {
                 Tile existing = board.getTileAt(fixedRow, c);
                 char ch = (existing != null) ? existing.getLetter() : pendingLetters[fixedRow][c];
-                if (ch == 0) {
-                    // disallow gaps: user must fill the span unless covered by existing tiles
-                    showError("There is a gap in your placement. Fill all squares in the span or clear and retry.");
-                    return;
-                }
+                if (ch == 0) { showError("There is a gap in your placement. Fill the span or clear and retry."); return; }
                 sb.append(ch);
             }
-            String word = sb.toString();
-            int startRow = fixedRow;
-            int startCol = min;
-            controller.handlePlaceWord(word, startRow, startCol, true);
+            controller.handlePlaceWord(sb.toString(), fixedRow, min, true);
         } else {
-            min = 14; max = 0;
+            int min = 14, max = 0;
             for (Point p : pendingCells) { min = Math.min(min, p.y); max = Math.max(max, p.y); }
 
             StringBuilder sb = new StringBuilder();
             for (int r = min; r <= max; r++) {
                 Tile existing = board.getTileAt(r, fixedCol);
                 char ch = (existing != null) ? existing.getLetter() : pendingLetters[r][fixedCol];
-                if (ch == 0) {
-                    showError("There is a gap in your placement. Fill all squares in the span or clear and retry.");
-                    return;
-                }
+                if (ch == 0) { showError("There is a gap in your placement. Fill the span or clear and retry."); return; }
                 sb.append(ch);
             }
-            String word = sb.toString();
-            int startRow = min;
-            int startCol = fixedCol;
-            controller.handlePlaceWord(word, startRow, startCol, false);
+            controller.handlePlaceWord(sb.toString(), min, fixedCol, false);
         }
-        // Success path will cause renderGameState(...) → which calls clearPendingPlacement().
-        // Failure path: controller calls showError, but pending preview remains so user can adjust or Clear.
     }
 
     /**
-     * Clears all staged/pending placements from the board preview and
-     * re-enables any rack buttons that were disabled during staging.
-     * Also resets the current rack selection and refreshes the board
-     * from the model to ensure consistency with the controller.
+     * Clears all staged placements, re-enables disabled rack buttons,
+     * and repaints the board/rack from the model.
      */
     private void clearPendingPlacement() {
-        // Clear preview from board
         for (Point p : pendingCells) {
-            int r = p.y, c = p.x;
-            pendingLetters[r][c] = 0;
-            JButton btn = tileButtons[r][c];
+            pendingLetters[p.y][p.x] = 0;
+            JButton btn = tileButtons[p.y][p.x];
             btn.setBackground(null);
         }
         pendingCells.clear();
 
-        // Re-enable any disabled rack buttons
         for (JButton b : rackButtons) {
-            if (!b.isEnabled()) {
-                b.setEnabled(true);
-            }
+            if (!b.isEnabled()) b.setEnabled(true);
             b.setBackground(null);
         }
 
-        // Clear current rack selection
         selectedRackIndex = -1;
         selectedRackLetter = null;
 
         statusLabel.setText("Cleared pending move. Select a rack tile, then click the board.");
-        // Repaint board from current model state if controller is present
-        if (controller != null) {
-            Game game = controller.getGame();
-            if (game != null) {
-                Board board = game.getBoard();
-                for (int row = 0; row < 15; row++) {
-                    for (int col = 0; col < 15; col++) {
-                        Tile tile = board.getTileAt(row, col);
-                        JButton btn = tileButtons[row][col];
-                        btn.setText(tile == null ? "" : String.valueOf(tile.getLetter()));
-                    }
+
+        if (controller != null && controller.getGame() != null) {
+            Board board = controller.getGame().getBoard();
+            for (int row = 0; row < 15; row++) {
+                for (int col = 0; col < 15; col++) {
+                    Tile tile = board.getTileAt(row, col);
+                    JButton btn = tileButtons[row][col];
+                    btn.setText(tile == null ? "" : String.valueOf(tile.getLetter()));
                 }
             }
+            boardPanel.revalidate();
+            boardPanel.repaint();
+            rackPanel.revalidate();
+            rackPanel.repaint();
         }
     }
 
     /**
-     * Prompts the user for a space-separated list of rack indices,
-     * validates the input, and delegates to the controller to perform the swap.
-     * If the input is invalid, shows an error and returns without action.
+     * Simple dialog to collect indices to swap; validates and delegates to controller.
      *
-     * @param e the ActionEvent from the "Swap Tiles" button
+     * @param e ActionEvent from "Swap Tiles"
      */
     private void onSwapTiles(ActionEvent e) {
         if (controller == null || controller.getGame() == null) return;
 
-        // Simple input dialog: indices separated by spaces (e.g., "0 2 5")
         String input = JOptionPane.showInputDialog(this,
                 "Enter indices of tiles to swap (e.g., 0 2 5):",
                 "Swap Tiles",
                 JOptionPane.PLAIN_MESSAGE);
 
-        if (input == null) return; // canceled
+        if (input == null) return;
 
         input = input.trim();
         if (input.isEmpty()) {
