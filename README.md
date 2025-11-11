@@ -47,20 +47,31 @@ All word validation, scoring, and placement logic are handled by the model layer
 
 ---
 
-## Group Work
-- **Mohamed Cherif Bah** – Implemented MVC pattern and GUI.  
-- **Handa, Jesse** – Created UML and sequence diagrams.  
-- **Olotu, Hamson** – Contributed to GUI implementation.  
-- **Bian, James** – Worked on sequence diagram and GUI.  
+# How to run
+JAR:
+`java -jar scrabble-m2.jar`
 
----
+IDE (IntelliJ): run Main (which creates Game, GameView, and GameController)
+Dictionary: ensure URL will be able to extract valid wordlist; otherwise use a local word list.
 
-## How to Run
+# Team Contributions
 
-### Option 1 — IDE
-Open the project in IntelliJ IDEA or Eclipse and run `Main.java`.  
-The GUI window will launch automatically.
+Milestone 2 (current)
 
-### Option 2 — Executable JAR
-```bash
-java -jar scrabble-m2.jar
+Mohamed Cherif Bah — Setup the core game rules: parsing coordinates and direction, checking words against dictionary, conflict checks, and made sure placed tiles can’t be overwritten. Setup place/swap/pass in the controller and added the error messages. Wrote a few JUnit tests for board/validation.
+
+James Bian — Built the GUI parts in GameView: Created the 15×15 board, showed the current player’s rack, and refreshed scores/next player after each turn. Cleaned up mouse/keyboard input and the listener code so moves update the view correctly. Added small tests for view↔model sync.
+
+Hamson Olotu — Finished TileBag and Player flow: Tile distribution, random draw on success, swap tiles back into bag, pass turn logic, and kept racks at max 7. Set up 2–4 player support. Wrote tests for bag/rack/turn flow and basic scoring.
+
+Jesse Handa — Made the UML class diagram and sequence diagrams, wrote the data structures explanation, the README and how to run, listed known issues/assumptions, organized the repo (commit messages/branches), and put together the final submission package.
+
+Milestone 1
+
+Mohamed Cherif Bah — Implemented Board (simulate, place, center/connect rules), text rendering; authored sequence diagram. Implemented Player (rack logic, draw/exchange/pass, scoring), rack visibility; contributed data-structures note.
+
+Jesse Handa — Implemented TilesBag (distribution, draw/return, values), integrated Dictionary loading & case-insensitive validation; prepared README and run instructions. Created UML class diagram; packaged scrabble-m1.jar.
+
+# Known Issues / Assumptions
+
+- Dictionary dependency: if using a URL, needs network otherwise requires local wordlist.
