@@ -1,64 +1,52 @@
-# scrabble
-Scrabble group project built by Jesse Handa (101264747) and Mohamed Cherif Bah (101292844)
-README
+# Scrabble
 
-# Scrabble — Milestone 1 (README)
-# Overview
+## Overview
+This version represents **Milestone 2** of the Scrabble project.  
+It extends the original text-based implementation into a **fully interactive GUI application** using Java Swing and a **Model–View–Controller (MVC)** architecture.
 
-This is a text-based implementation of the game Scrabble, as specified by the milestone 1 instructions. Users can play the game via the console using their keyboard. This README:
+Players can now interact directly with the board by **selecting tiles from their rack and placing them on the grid**.  
+All word validation, scoring, and placement logic are handled by the model layer.
 
-- explains the rest of the deliverables included with this submission,
-- lists team contributions for the current milestone, and addresses issues (if applicable)
+---
 
-# Deliverables
+## Deliverables
 
-- Source Code (Java)
+### Source Code (Java)
 
-- Board.java – Represents the Scrabble board as a 15x15 grid. Handles word placement and board display.
+#### Core Game Logic
+- **Board.java** – Represents the 15×15 Scrabble board. Handles word placement, rule validation (center start, adjacency), scoring, and display.  
+- **Game.java** – Manages player turns, rack refilling, and high-level game flow.  
+- **Player.java** – Maintains player state (name, rack, score) and helper methods for tile usage.  
+- **TileBag.java** – Initializes the full Scrabble tile set and manages random draws and returns.  
+- **Tile.java** – Defines a letter tile with its character and point value.  
+- **Dictionary.java** – Loads and validates words using the MIT word list, with an offline fallback set for reliability.
 
-- Game.java – console UI: 2–4 players, place/swap/skip, turn loop, state printing.
+#### MVC Components (New for Milestone 2)
+- **GameController.java** – Coordinates between the GUI and model. Handles placement, swapping, passing, and view updates.  
+- **GameView.java** – Swing-based graphical interface. Allows players to:
+  - Select rack tiles  
+  - Click on board cells to place them  
+  - Commit, swap, or pass their turn visually  
+  - View current scores and tiles dynamically  
 
-- Main.java - Entry point for scrabble game. Prompts for player names and starts the game
+#### Supporting Files
+- **Main.java** – Entry point; initializes the dictionary, model, controller, and GUI view.  
+- **JUnit Tests** – Added tests for:
+  - Board placement rules (center, adjacency, overlap)  
+  - Scoring validation  
+  - Rack refilling  
+  - Word dictionary validity  
+- **UML Class Diagram** – Updated to include the MVC structure.  
+- **Sequence Diagram** – Simplified flow of the “Commit Move” process in the GUI.  
 
-- Player.java – Represents a player in the Scrabble game. Each player has a name, a rack of letter tiles, and a score.
+---
 
-- TileBag.java – Represents the bag of tiles in Scrabble. Handles initialization and random drawing of tiles.
+## How to Run
 
-- Tile.java – Represents a single letter tile in Scrabble. Each tile has a letter and a point value.
+### Option 1 — IDE
+Open the project in IntelliJ IDEA or Eclipse and run `Main.java`.  
+The GUI window will launch automatically.
 
-- Dictionary.java – Represents a dictionary of valid Scrabble words. Loads words from a web-hosted text file and checks word validity.
-
-- UML Class Diagram (docs/uml.*) — classes and relationships (Game, Board, Player, TilesBag, Dictionary).
-
-- JUnit Tests (test/) — smoke tests for board rules, dictionary, and basic scoring.
-
-- Executable scrabble-m1.jar — runnable build of the console app.
-
-- This README.
-
-# How to run:
-
-JAR: java -jar scrabble-m1.jar
-
-IDE (IntelliJ): run main
-
-Dictionary: ensure URL will be able to extract valid wordlist.
-
-# Team Contributions
-
-Replace the placeholders below with actual names and concrete tasks.
-
-Milestone 1 (current)
-
-Mohamed Cherif Bah (101292844): Implemented Board (simulate, place, center/connect rules), text rendering; authored sequence diagram. Implemented Player (rack logic, draw/exchange/pass, scoring), rack visibility; contributed data-structures note.
-
-Jesse Handa (101264747): Implemented TilesBag (distribution, draw/return, values), integrated Dictionary loading & case-insensitive validation; prepared README and run instructions. Created UML class diagram; packaged scrabble-m1.jar.
-
-
-# Known Issues / Assumptions
-
-Scope-limited to M1 by design: no premium squares, no blank tiles, no cross-word scoring beyond validating the main word.
-
-Dictionary dependency: if anything goes wrong extracting the wordlist from the URL, word validation will fail; ensure the URL is present and valid.
-
-Input mode: console prompts accept tile-by-tile placement in a single straight, contiguous line (ACROSS or DOWN). Official Scrabble notation can be added in later milestones if required.
+### Option 2 — Executable JAR
+```bash
+java -jar scrabble-m2.jar
