@@ -1,4 +1,4 @@
-# Scrabble
+# Scrabble Project Group SYSC3110
 
 ## Overview
 This version represents **Milestone 2** of the Scrabble project.  
