@@ -1,7 +1,7 @@
 # Scrabble SYSC3110 Group project
 # Group 2
 # Members:
- **Mohamed Cherif Bah**
+- **Mohamed Cherif Bah**
 - **Handa, Jesse** 
 - **Olotu, Hamson** 
 - **Bian, James**
