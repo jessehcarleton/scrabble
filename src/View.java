@@ -10,19 +10,19 @@ public class View extends JFrame implements gameListener{
     private Game game;
     private JButton[][] boardButtons;
     private JButton playButton, swapButton, passButton;
-    ArrayList<String> players = new ArrayList<>();
-    ArrayList<JTextField> scoreFields = new ArrayList<>();
-    JButton [] playerRack = new JButton[7];
-    JPanel boardPanel;
-    JPanel playerTilePanel;
-    JPanel tilebagPanel;
-    JPanel playerPanel;
-    JPanel controlPanel;
-    JPanel scorePanel;
+    public ArrayList<String> players = new ArrayList<>();
+    public ArrayList<JTextField> scoreFields = new ArrayList<>();
+    public JButton [] playerRack = new JButton[7];
+    private JPanel boardPanel;
+    private JPanel playerTilePanel;
+    private JPanel tilebagPanel;
+    private JPanel playerPanel;
+    private JPanel controlPanel;
+    private JPanel scorePanel;
 
-    JLabel turn;
-    JLabel tilesLeft;
-    JTextField tileTotal;
+    private JLabel turn;
+    private JLabel tilesLeft;
+    private JTextField tileTotal;
 
     /**
      * Constructs a view for the Scrabble game.
@@ -95,21 +95,25 @@ public class View extends JFrame implements gameListener{
      * Number of players is chosen by option button pane.
      */
     public ArrayList<String> buildPlayers() {
-        players.clear();
-        String[] options = {"2", "3", "4"};
-        // Choose Number of players
-        int choice = Integer.parseInt( (String)JOptionPane.showInputDialog(null,
-                "Select number of players:",
-                "Player Setup",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]
-        ));
-        // Get each player's name
-        for (int i = 1; i < choice + 1; i++) {
-            String name = JOptionPane.showInputDialog("Player" + i + "'s name: ");
-            players.add(name);
+        try {
+            players.clear();
+            String[] options = {"2", "3", "4"};
+            // Choose Number of players
+            int choice = Integer.parseInt( (String)JOptionPane.showInputDialog(null,
+                    "Select number of players:",
+                    "Player Setup",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            ));
+            // Get each player's name
+            for (int i = 1; i < choice + 1; i++) {
+                String name = JOptionPane.showInputDialog("Player" + i + "'s name: ");
+                players.add(name);
+            }
+        } catch (Exception e) {
+            System.out.println("Error initializing players: " + e.getMessage());
         }
         return players;
     }

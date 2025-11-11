@@ -1,5 +1,5 @@
 # scrabble
-Scrabble group project built by Jesse Handa (101264747) and Mohamed Cherif Bah (101292844)
+Scrabble group project built by Jesse Handa (101264747), James Bian (101311339) and Mohamed Cherif Bah (101292844)
 README
 
 # Scrabble — Milestone 1 (README)
@@ -48,12 +48,15 @@ Dictionary: ensure URL will be able to extract valid wordlist.
 
 Replace the placeholders below with actual names and concrete tasks.
 
-Milestone 1 (current)
+Milestone 1 
 
 Mohamed Cherif Bah (101292844): Implemented Board (simulate, place, center/connect rules), text rendering; authored sequence diagram. Implemented Player (rack logic, draw/exchange/pass, scoring), rack visibility; contributed data-structures note.
 
 Jesse Handa (101264747): Implemented TilesBag (distribution, draw/return, values), integrated Dictionary loading & case-insensitive validation; prepared README and run instructions. Created UML class diagram; packaged scrabble-m1.jar.
 
+Milestone 2 (current)
+
+James Bian: Implemented View, Controller helper methods, Defined Interfacts, authored Sequence Diagram, authored Class diagram, contributed data structures note, packaged scrabble-m2.jar
 
 # Known Issues / Assumptions
 
