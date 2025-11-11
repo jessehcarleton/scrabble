@@ -130,7 +130,7 @@ public class Player {
         word = word.toUpperCase();
         List<Character> rackLetters = new ArrayList<>();
         for (Tile t : rack) {
-            rackLetters.add(t.getLetter());
+            rackLetters.add((Character) t.getLetter());
         }
 
         for (char c : word.toCharArray()) {
@@ -141,5 +141,8 @@ public class Player {
         return true;
     }
 
+    public boolean removeTile(Tile tile) {
+        return rack.remove(tile);
+    }
 
 }

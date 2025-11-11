@@ -90,9 +90,11 @@ public class Board {
     public void printBoard() {
         System.out.println("   A B C D E F G H I J K L M N O");
         for (int r = 0; r < 15; r++) {
-            System.out.printf("%2d ", r + 1);
+            //System.out.printf("%2d ", r + 1);
+            System.out.print(r < 9 ? " " + (r + 1) : r + 1);
             for (int c = 0; c < 15; c++) {
                 Tile tile = grid[r][c];
+                System.out.print(c == 0 ? " " : "");
                 System.out.print(tile == null ? ". " : tile.getLetter() + " ");
             }
             System.out.println();
