@@ -1,4 +1,10 @@
-# Scrabble Project Group SYSC3110
+# Scrabble SYSC3110 Group project
+# Group 2
+# Members:
+ **Mohamed Cherif Bah**
+- **Handa, Jesse** 
+- **Olotu, Hamson** 
+- **Bian, James**
 
 ## Overview
 This version represents **Milestone 2** of the Scrabble project.  
@@ -38,6 +44,14 @@ All word validation, scoring, and placement logic are handled by the model layer
   - Word dictionary validity  
 - **UML Class Diagram** – Updated to include the MVC structure.  
 - **Sequence Diagram** – Simplified flow of the “Commit Move” process in the GUI.  
+
+---
+
+## Group Work
+- **Mohamed Cherif Bah** – Implemented MVC pattern and GUI.  
+- **Handa, Jesse** – Created UML and sequence diagrams.  
+- **Olotu, Hamson** – Contributed to GUI implementation.  
+- **Bian, James** – Worked on sequence diagram and GUI.  
 
 ---
 
