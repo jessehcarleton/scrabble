@@ -59,6 +59,8 @@ public class GameView extends JFrame {
     private int selectedRackIndex = -1;
     /** Selected rack tile letter (cached). */
     private Character selectedRackLetter = null;
+    /** Whether the selected rack tile is a blank. */
+    private boolean selectedRackIsBlank = false;
 
     // ---------- UI size constants (bigger tiles) ----------
     private static final Dimension BOARD_CELL_SIZE = new Dimension(52, 52);
@@ -71,6 +73,13 @@ public class GameView extends JFrame {
      * Enlarges the window to fit bigger cells and rack tiles.
      */
     public GameView() {
+        this(true);
+    }
+
+    /**
+     * Constructs the GameView and optionally shows the window (headless tests can hide it).
+     */
+    public GameView(boolean showWindow) {
         setTitle("Scrabble Game");
         setSize(1280, 900);
         setMinimumSize(new Dimension(1100, 800));
@@ -78,7 +87,7 @@ public class GameView extends JFrame {
         setLayout(new BorderLayout());
         initComponents();
         setLocationRelativeTo(null);
-        setVisible(true);
+        setVisible(showWindow);
     }
 
     /**
@@ -238,7 +247,7 @@ public class GameView extends JFrame {
                 Tile tile = board.getTileAt(row, col);
                 JButton btn = tileButtons[row][col];
                 btn.setText(tile == null ? "" : String.valueOf(tile.getLetter()));
-                btn.setBackground(null);
+                btn.setBackground(colorForPremium(board.getPremiumAt(row, col), tile != null));
             }
         }
 
@@ -271,6 +280,7 @@ public class GameView extends JFrame {
         rackSnapshot.clear();
         selectedRackIndex = -1;
         selectedRackLetter = null;
+        selectedRackIsBlank = false;
 
         for (int i = 0; i < current.getRack().size(); i++) {
             Tile t = current.getRack().get(i);
@@ -325,7 +335,26 @@ public class GameView extends JFrame {
         btn.setBackground(new Color(255, 255, 180));
 
         selectedRackIndex = idx;
-        selectedRackLetter = rackSnapshot.get(idx).getLetter();
+        Tile tile = rackSnapshot.get(idx);
+        selectedRackIsBlank = tile.isBlank();
+        if (selectedRackIsBlank) {
+            String input = JOptionPane.showInputDialog(
+                    this,
+                    "Choose a letter for this blank tile:",
+                    "Blank Tile",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+            if (input == null || input.trim().isEmpty()) {
+                selectedRackIndex = -1;
+                selectedRackLetter = null;
+                btn.setBackground(null);
+                statusLabel.setText("Blank selection cancelled.");
+                return;
+            }
+            selectedRackLetter = Character.toUpperCase(input.trim().charAt(0));
+        } else {
+            selectedRackLetter = tile.getLetter();
+        }
         statusLabel.setText("Selected: " + selectedRackLetter + ". Click a board cell to drop.");
     }
 
@@ -461,6 +490,7 @@ public class GameView extends JFrame {
 
         selectedRackIndex = -1;
         selectedRackLetter = null;
+        selectedRackIsBlank = false;
 
         statusLabel.setText("Cleared pending move. Select a rack tile, then click the board.");
 
@@ -471,6 +501,7 @@ public class GameView extends JFrame {
                     Tile tile = board.getTileAt(row, col);
                     JButton btn = tileButtons[row][col];
                     btn.setText(tile == null ? "" : String.valueOf(tile.getLetter()));
+                    btn.setBackground(colorForPremium(board.getPremiumAt(row, col), tile != null));
                 }
             }
             boardPanel.revalidate();
@@ -512,5 +543,22 @@ public class GameView extends JFrame {
             }
         }
         controller.handleSwapTiles(indices);
+    }
+
+    /** Returns a background color for the given premium square. */
+    private Color colorForPremium(Board.Premium premium, boolean occupied) {
+        Color base;
+        switch (premium) {
+            case DOUBLE_LETTER: base = new Color(180, 220, 255); break;
+            case TRIPLE_LETTER: base = new Color(120, 190, 255); break;
+            case DOUBLE_WORD:   base = new Color(255, 210, 170); break;
+            case TRIPLE_WORD:   base = new Color(255, 160, 140); break;
+            default:            base = new Color(235, 235, 235); break;
+        }
+        if (occupied) {
+            // Slightly muted when a tile occupies the square
+            return base.darker();
+        }
+        return base;
     }
 }

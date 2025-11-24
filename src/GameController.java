@@ -1,4 +1,7 @@
 import java.util.List;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import javax.swing.SwingUtilities;
 
 /**
  * GameController acts as the mediator between the Game model and the GameView.
@@ -15,6 +18,8 @@ public class GameController {
 
     /** The GameView GUI responsible for rendering the game state. */
     private final GameView view;
+    /** Prevents nested AI recursion. */
+    private boolean aiTurnInProgress = false;
 
     /**
      * Constructs a GameController with the given model and view.
@@ -26,8 +31,11 @@ public class GameController {
     public GameController(Game game, GameView view) {
         this.game = game;
         this.view = view;
-        view.setController(this);
-        view.renderGameState(game);
+        if (view != null) {
+            view.setController(this);
+            view.renderGameState(game);
+        }
+        maybePlayAiTurn();
     }
 
     /**
@@ -45,15 +53,15 @@ public class GameController {
         Board board = game.getBoard();
 
         if (word == null || word.isEmpty()) {
-            view.showError("Please enter a word.");
+            if (view != null) view.showError("Please enter a word.");
             return;
         }
         if (row < 0 || row > 14 || col < 0 || col > 14) {
-            view.showError("Row/Column out of bounds.");
+            if (view != null) view.showError("Row/Column out of bounds.");
             return;
         }
         if (!game.getDictionary().isValid(word)) {
-            view.showError("Invalid word! Please try again.");
+            if (view != null) view.showError("Invalid word! Please try again.");
             return;
         }
 
@@ -62,7 +70,10 @@ public class GameController {
             refillRack(currentPlayer);
             advanceTurn();
         } else {
-            view.showError("Word placement failed. Check connectivity, conflicts, bounds, and first-move center.");
+            if (view != null) {
+                view.showError("Word placement failed. Check connectivity, conflicts, bounds, and first-move center.");
+                view.renderGameState(game);
+            }
         }
     }
 
@@ -78,11 +89,11 @@ public class GameController {
 
         List<Tile> toSwap = currentPlayer.getTilesAtIndices(indices);
         if (toSwap.isEmpty()) {
-            view.showError("No valid indices selected for swap.");
+            if (view != null) view.showError("No valid indices selected for swap.");
             return;
         }
         if (bag.isEmpty()) {
-            view.showError("Cannot swap: tile bag is empty.");
+            if (view != null) view.showError("Cannot swap: tile bag is empty.");
             return;
         }
 
@@ -126,7 +137,10 @@ public class GameController {
      */
     void advanceTurn() {
         game.nextPlayer();
-        view.renderGameState(game);
+        if (view != null) {
+            view.renderGameState(game);
+        }
+        maybePlayAiTurn();
     }
 
     /**
@@ -136,5 +150,88 @@ public class GameController {
      */
     public Game getGame() {
         return game;
+    }
+
+    /** If the active player is AI-controlled, attempt to play automatically. */
+    private void maybePlayAiTurn() {
+        if (aiTurnInProgress) return;
+
+        Player current = game.getPlayers().get(game.getCurrentPlayerIndex());
+        if (!current.isAi()) return;
+
+        aiTurnInProgress = true;
+        SwingUtilities.invokeLater(() -> {
+            try {
+                runAiTurn(current);
+            } finally {
+                aiTurnInProgress = false;
+                // Chain to next AI if applicable after the move/pass.
+                maybePlayAiTurn();
+            }
+        });
+    }
+
+    /** Simple AI: try a handful of rack-valid dictionary words and place the first legal move. */
+    private void runAiTurn(Player aiPlayer) {
+        Board board = game.getBoard();
+        List<String> candidates = pickCandidateWords(aiPlayer, 30);
+
+        for (String word : candidates) {
+            if (tryPlaceAnywhere(word, aiPlayer, board)) {
+                refillRack(aiPlayer);
+                advanceTurn();
+                return;
+            }
+        }
+
+        // No moves: pass turn
+        handlePassTurn();
+    }
+
+    /** Attempts to place the word at any coordinate/orientation; returns true on success. */
+    private boolean tryPlaceAnywhere(String word, Player player, Board board) {
+        for (boolean horizontal : new boolean[]{true, false}) {
+            for (int row = 0; row < 15; row++) {
+                for (int col = 0; col < 15; col++) {
+                    if (board.placeWord(word, row, col, horizontal, player)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Picks rack-buildable dictionary words, preferring higher letter sums/lengths.
+     */
+    private List<String> pickCandidateWords(Player player, int limit) {
+        int blanks = (int) player.getRack().stream().filter(Tile::isBlank).count();
+        return game.getDictionary().getWords().stream()
+                .filter(w -> w.length() <= player.getRack().size() + blanks && w.length() >= 2)
+                .filter(player::canFormWord)
+                .sorted(Comparator
+                        .comparingInt(String::length)
+                        .thenComparingInt(this::roughLetterScore)
+                        .reversed())
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    /** Rough heuristic for word strength: sum of tile points (ignores premiums). */
+    private int roughLetterScore(String word) {
+        int score = 0;
+        for (char c : word.toCharArray()) {
+            switch (Character.toUpperCase(c)) {
+                case 'D': case 'G': score += 2; break;
+                case 'B': case 'C': case 'M': case 'P': score += 3; break;
+                case 'F': case 'H': case 'V': case 'W': case 'Y': score += 4; break;
+                case 'K': score += 5; break;
+                case 'J': case 'X': score += 8; break;
+                case 'Q': case 'Z': score += 10; break;
+                default: score += 1; break;
+            }
+        }
+        return score;
     }
 }
