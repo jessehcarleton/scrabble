@@ -1,6 +1,6 @@
 import javax.swing.*;
 
-/**
+/**jj
  * Application entry point for the Scrabble game.
  *
  * Milestone 2 patches:
