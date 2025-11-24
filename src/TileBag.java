@@ -9,7 +9,7 @@ public class TileBag {
 
     /**
      * Constructs a TileBag and fills it with the standard Scrabble tile distribution.
-     * For Milestone 1, blank tiles are excluded.
+     * Milestone 3: includes blank tiles.
      */
     public TileBag() {
         tiles = new ArrayList<>();
@@ -74,7 +74,8 @@ public class TileBag {
         addTiles('X', 8, 1);
         addTiles('Y', 4, 2);
         addTiles('Z', 10, 1);
-        // Blank tiles (2) are excluded for Milestone 1
+        // Two blank tiles (wildcards, 0 points)
+        addBlankTiles(2);
     }
 
     /**
@@ -87,6 +88,13 @@ public class TileBag {
     private void addTiles(char letter, int points, int count) {
         for (int i = 0; i < count; i++) {
             tiles.add(new Tile(letter, points));
+        }
+    }
+
+    /** Adds blank tiles (wildcards worth 0 points). */
+    private void addBlankTiles(int count) {
+        for (int i = 0; i < count; i++) {
+            tiles.add(new Tile('?', 0, true));
         }
     }
 

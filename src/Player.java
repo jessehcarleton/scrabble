@@ -9,6 +9,7 @@ public class Player {
     private String name;
     private List<Tile> rack;
     private int score;
+    private boolean ai;
 
     /**
      * Constructs a new Player with the given name.
@@ -20,6 +21,7 @@ public class Player {
         this.name = name;
         this.rack = new ArrayList<>();
         this.score = 0;
+        this.ai = false;
     }
 
     /**
@@ -47,6 +49,16 @@ public class Player {
      */
     public int getScore() {
         return score;
+    }
+
+    /** Marks this player as an AI-controlled player. */
+    public void setAi(boolean ai) {
+        this.ai = ai;
+    }
+
+    /** Returns true if this player is AI-controlled. */
+    public boolean isAi() {
+        return ai;
     }
 
     /**
@@ -117,11 +129,9 @@ public class Player {
         return null;
     }
 
-
-
     /**
      * Checks if the player has the necessary tiles to form the given word.
-     * Does not account for blank tiles yet (Milestone 3).
+     * Accounts for blank tiles by treating them as wildcards.
      *
      * @param word the word to check
      * @return true if the player can form the word, false otherwise
@@ -129,13 +139,22 @@ public class Player {
     public boolean canFormWord(String word) {
         word = word.toUpperCase();
         List<Character> rackLetters = new ArrayList<>();
+        int blanks = 0;
         for (Tile t : rack) {
-            rackLetters.add(t.getLetter());
+            if (t.isBlank()) {
+                blanks++;
+            } else {
+                rackLetters.add(t.getLetter());
+            }
         }
 
         for (char c : word.toCharArray()) {
             if (!rackLetters.remove((Character) c)) {
-                return false;
+                if (blanks > 0) {
+                    blanks--;
+                } else {
+                    return false;
+                }
             }
         }
         return true;
@@ -156,5 +175,19 @@ public class Player {
             }
         }
         return selectedTiles;
+    }
+
+    /**
+     * Finds and returns (without removing) the first blank tile in the rack.
+     *
+     * @return a blank Tile or null if none remain
+     */
+    public Tile findBlankTile() {
+        for (Tile tile : rack) {
+            if (tile.isBlank()) {
+                return tile;
+            }
+        }
+        return null;
     }
 }

@@ -5,6 +5,7 @@
 public class Tile {
     private char letter;
     private int points;
+    private final boolean blank;
 
     /**
      * Constructs a Tile with the specified letter and point value.
@@ -13,8 +14,20 @@ public class Tile {
      * @param points the point value of the tile
      */
     public Tile(char letter, int points) {
+        this(letter, points, false);
+    }
+
+    /**
+     * Constructs a Tile with an explicit blank flag (used for wildcard tiles).
+     *
+     * @param letter the character on the tile (A-Z) or placeholder for blanks
+     * @param points the point value of the tile
+     * @param isBlank true if this tile is a blank (wildcard)
+     */
+    public Tile(char letter, int points, boolean isBlank) {
         this.letter = Character.toUpperCase(letter);
         this.points = points;
+        this.blank = isBlank;
     }
 
     /**
@@ -33,6 +46,26 @@ public class Tile {
      */
     public int getPoints() {
         return points;
+    }
+
+    /**
+     * Indicates whether this tile is a blank (wildcard) tile.
+     *
+     * @return true if blank; false otherwise
+     */
+    public boolean isBlank() {
+        return blank;
+    }
+
+    /**
+     * Assigns a display letter to a blank tile (score remains 0).
+     *
+     * @param newLetter the letter this blank should represent
+     */
+    public void assignBlankLetter(char newLetter) {
+        if (blank) {
+            this.letter = Character.toUpperCase(newLetter);
+        }
     }
 
     /**
