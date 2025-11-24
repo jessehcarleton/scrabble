@@ -7,7 +7,11 @@ import java.util.Set;
 /**
  * Represents a dictionary of valid Scrabble words.
  * Loads words from a web-hosted text file and checks word validity.
- * Mohamed Cherif
+ *
+ *
+ * Milestone 3 additions:
+ * - Added preset set of words constructor for testing.
+ *
  */
 public class Dictionary {
     private Set<String> validWords;
@@ -23,6 +27,18 @@ public class Dictionary {
     }
 
     /**
+     * Testing/alternate constructor with a predefined set of words.
+     *
+     * @param words words to seed (case-insensitive)
+     */
+    public Dictionary(Set<String> words) {
+        validWords = new HashSet<>();
+        for (String w : words) {
+            if (w != null) validWords.add(w.toUpperCase());
+        }
+    }
+
+    /**
      * Checks if a given word is valid according to the dictionary.
      *
      * @param word the word to check
@@ -30,6 +46,11 @@ public class Dictionary {
      */
     public boolean isValid(String word) {
         return validWords.contains(word.toUpperCase());
+    }
+
+    /** Returns the set of loaded words (uppercase). */
+    public Set<String> getWords() {
+        return java.util.Collections.unmodifiableSet(validWords);
     }
 
     /**

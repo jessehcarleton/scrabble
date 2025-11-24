@@ -7,15 +7,32 @@
  * - Keeps placement/validation logic inside the model (no GUI mutations).
  * - Removes unused private helper to avoid duplication with Player API.
  * - No scoring duplication: Board remains the single source to apply score for a placed word.
+ *
+ * Milestone 3 additions:
+ * - Supports blank tiles that can represent any letter.
+ * - Calculates score considering premium squares only for newly placed tiles.
+ * - Scoring now accounts for premiums; calculateScore returns word * wordMultipliers based on new tiles.
  */
 public class Board {
     private final Tile[][] grid;
+    private final Premium[][] premiumGrid;
+
+    /** Premium squares on board. */
+    public enum Premium {
+        NONE,
+        DOUBLE_LETTER,
+        TRIPLE_LETTER,
+        DOUBLE_WORD,
+        TRIPLE_WORD
+    }
 
     /**
      * Constructs a new empty 15x15 Scrabble board.
      */
     public Board() {
         grid = new Tile[15][15];
+        premiumGrid = new Premium[15][15];
+        initPremiumSquares();
     }
 
     /**
@@ -55,13 +72,37 @@ public class Board {
             if (!coversCenter) return false;
         }
 
-        // Conflict check with existing tiles (must match placed letters)
+        // Gather placement info without mutating state
+        Tile[] placementTiles = new Tile[word.length()];
+        char[] placementLetters = new char[word.length()];
+        boolean[] isNew = new boolean[word.length()];
+
+        // Copy of rack for availability checks
+        java.util.List<Tile> tempRack = new java.util.ArrayList<>(player.getRack());
+
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
             Tile existing = grid[r][c];
-            if (existing != null && existing.getLetter() != word.charAt(i)) {
-                return false;
+            char needed = word.charAt(i);
+            if (existing != null) {
+                if (existing.getLetter() != needed) {
+                    return false; // conflict
+                }
+                placementTiles[i] = existing;
+                placementLetters[i] = existing.getLetter();
+                isNew[i] = false;
+            } else {
+                Tile tile = removeMatchingTile(tempRack, needed);
+                if (tile == null) {
+                    tile = removeBlankTile(tempRack);
+                    if (tile == null) {
+                        return false; // missing tile or blank
+                    }
+                }
+                placementTiles[i] = tile;
+                placementLetters[i] = needed;
+                isNew[i] = true;
             }
         }
 
@@ -72,13 +113,11 @@ public class Board {
                 int r = horizontal ? row : row + i;
                 int c = horizontal ? col + i : col;
 
-                // Shares a cell with an existing tile
                 if (grid[r][c] != null) {
                     connectsToExistingTile = true;
                     break;
                 }
 
-                // Adjacent to an existing tile (orthogonally)
                 if ((r > 0 && grid[r - 1][c] != null) ||
                         (r < 14 && grid[r + 1][c] != null) ||
                         (c > 0 && grid[r][c - 1] != null) ||
@@ -89,15 +128,14 @@ public class Board {
             if (!connectsToExistingTile) return false;
         }
 
-        // Place the word: only fill empty cells; consume player's tiles for those cells
+        // All validations passed: commit placement
         for (int i = 0; i < word.length(); i++) {
             int r = horizontal ? row : row + i;
             int c = horizontal ? col + i : col;
-            if (grid[r][c] == null) {
-                Tile tile = player.findTileInRack(word.charAt(i));
-                if (tile == null) {
-                    // Not enough letters in rack; abort (nothing placed yet, so safe)
-                    return false;
+            if (isNew[i]) {
+                Tile tile = placementTiles[i];
+                if (tile.isBlank()) {
+                    tile.assignBlankLetter(placementLetters[i]);
                 }
                 grid[r][c] = tile;
                 player.getRack().remove(tile);
@@ -105,7 +143,7 @@ public class Board {
         }
 
         // Apply score once (no controller-side add)
-        player.addScore(calculateScore(word));
+        player.addScore(calculateScore(word, row, col, horizontal, isNew));
         return true;
     }
 
@@ -168,18 +206,43 @@ public class Board {
     }
 
     /**
-     * Calculates the score for a word based on tile points.
-     * Does not yet account for premium squares or cross-word bonuses.
+     * Calculates the score for a word based on tile points and premium squares.
+     * Premium squares apply only to tiles placed in this move (isNew == true).
      *
      * @param word the word to score
+     * @param row starting row
+     * @param col starting column
+     * @param horizontal orientation
+     * @param isNew flags indicating which letters were placed this turn
      * @return the total score
      */
-    int calculateScore(String word) {
+    int calculateScore(String word, int row, int col, boolean horizontal, boolean[] isNew) {
         int score = 0;
-        for (char c : word.toCharArray()) {
-            score += getTilePoints(c);
+        int wordMultiplier = 1;
+        for (int i = 0; i < word.length(); i++) {
+            int r = horizontal ? row : row + i;
+            int c = horizontal ? col + i : col;
+            Tile tile = grid[r][c];
+            int tilePoints = tile != null ? tile.getPoints() : getTilePoints(word.charAt(i));
+
+            if (isNew != null && isNew.length > i && isNew[i]) {
+                Premium premium = premiumGrid[r][c];
+                switch (premium) {
+                    case DOUBLE_LETTER:
+                        tilePoints *= 2; break;
+                    case TRIPLE_LETTER:
+                        tilePoints *= 3; break;
+                    case DOUBLE_WORD:
+                        wordMultiplier *= 2; break;
+                    case TRIPLE_WORD:
+                        wordMultiplier *= 3; break;
+                    default:
+                        break;
+                }
+            }
+            score += tilePoints;
         }
-        return score;
+        return score * wordMultiplier;
     }
 
     /**
@@ -200,5 +263,83 @@ public class Board {
             case 'Q': case 'Z': return 10;
             default: return 0;
         }
+    }
+
+    /** Returns the premium type for a given coordinate. */
+    public Premium getPremiumAt(int row, int col) {
+        if (row < 0 || row >= 15 || col < 0 || col >= 15) return Premium.NONE;
+        return premiumGrid[row][col];
+    }
+
+    /**
+     * Initializes the board's premium square layout to the standard Scrabble board.
+     * Coordinates are zero-based (row, col).
+     */
+    private void initPremiumSquares() {
+        for (int r = 0; r < 15; r++) {
+            for (int c = 0; c < 15; c++) {
+                premiumGrid[r][c] = Premium.NONE;
+            }
+        }
+
+        // Triple Word Score
+        int[][] tw = {
+                {0,0},{0,7},{0,14},{7,0},{7,14},{14,0},{14,7},{14,14}
+        };
+        markPremium(tw, Premium.TRIPLE_WORD);
+
+        // Double Word Score (including center)
+        int[][] dw = {
+                {1,1},{2,2},{3,3},{4,4},{7,7},{10,10},{11,11},{12,12},{13,13},
+                {1,13},{2,12},{3,11},{4,10},{10,4},{11,3},{12,2},{13,1}
+        };
+        markPremium(dw, Premium.DOUBLE_WORD);
+
+        // Triple Letter Score
+        int[][] tl = {
+                {1,5},{1,9},{5,1},{5,5},{5,9},{5,13},
+                {9,1},{9,5},{9,9},{9,13},{13,5},{13,9}
+        };
+        markPremium(tl, Premium.TRIPLE_LETTER);
+
+        // Double Letter Score
+        int[][] dl = {
+                {0,3},{0,11},{2,6},{2,8},{3,0},{3,7},{3,14},
+                {6,2},{6,6},{6,8},{6,12},{7,3},{7,11},
+                {8,2},{8,6},{8,8},{8,12},{11,0},{11,7},{11,14},
+                {12,6},{12,8},{14,3},{14,11}
+        };
+        markPremium(dl, Premium.DOUBLE_LETTER);
+    }
+
+    /** Utility to mark premium squares. */
+    private void markPremium(int[][] coords, Premium premium) {
+        for (int[] rc : coords) {
+            premiumGrid[rc[0]][rc[1]] = premium;
+        }
+    }
+
+    /** Removes and returns a matching letter tile from the temporary rack. */
+    private Tile removeMatchingTile(java.util.List<Tile> rack, char letter) {
+        for (int i = 0; i < rack.size(); i++) {
+            Tile t = rack.get(i);
+            if (!t.isBlank() && t.getLetter() == letter) {
+                rack.remove(i);
+                return t;
+            }
+        }
+        return null;
+    }
+
+    /** Removes and returns a blank tile from the temporary rack. */
+    private Tile removeBlankTile(java.util.List<Tile> rack) {
+        for (int i = 0; i < rack.size(); i++) {
+            Tile t = rack.get(i);
+            if (t.isBlank()) {
+                rack.remove(i);
+                return t;
+            }
+        }
+        return null;
     }
 }
