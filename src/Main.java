@@ -1,6 +1,6 @@
 import javax.swing.*;
 
-/**jj
+/**
  * Application entry point for the Scrabble game.
  *
  * Milestone 2 patches:
@@ -56,7 +56,18 @@ public class Main {
                     if (name == null || name.trim().isEmpty()) {
                         name = "Player " + i;
                     }
-                    game.addPlayer(name.trim());
+                    String[] typeOptions = {"Human", "AI"};
+                    String type = (String) JOptionPane.showInputDialog(
+                            null,
+                            "Select player type for " + name + ":",
+                            "Player Type",
+                            JOptionPane.QUESTION_MESSAGE,
+                            null,
+                            typeOptions,
+                            typeOptions[0]
+                    );
+                    boolean isAi = "AI".equals(type);
+                    game.addPlayer(name.trim(), isAi);
                 }
 
                 // Construct View and Controller

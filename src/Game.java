@@ -30,7 +30,13 @@ public class Game {
      * @param name the name of the player
      */
     public void addPlayer(String name) {
+        addPlayer(name, false);
+    }
+
+    /** Adds a player and optionally marks them as AI. */
+    public void addPlayer(String name, boolean ai) {
         Player player = new Player(name);
+        player.setAi(ai);
         for (int i = 0; i < 7; i++) {
             player.getRack().add(tileBag.drawTile());
         }
