@@ -11,6 +11,9 @@ import javax.swing.SwingUtilities;
  * - Removes double-scoring (Board is the single authority that applies score).
  * - Centralizes placement/swap/pass flows.
  * - Triggers View re-render after each state change.
+ * Milestone 3 additions:
+ * Implements a simple AI that plays automatically on its turn.
+ *
  */
 public class GameController {
     /** The Game model containing players, board, tile bag, and dictionary. */
