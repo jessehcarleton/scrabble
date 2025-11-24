@@ -7,6 +7,7 @@ import java.util.Set;
 /**
  * Represents a dictionary of valid Scrabble words.
  * Loads words from a web-hosted text file and checks word validity.
+ * Mohamed
  */
 public class Dictionary {
     private Set<String> validWords;
