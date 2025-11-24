@@ -7,6 +7,10 @@ import javax.swing.*;
  * - Load the Dictionary (network I/O) BEFORE entering the Swing Event Dispatch Thread
  *   to avoid freezing the UI while fetching the word list.
  * - Create and wire MVC on the EDT after resources are ready.
+ * Milestone 3 additions:
+ * - Prompt for number of players and their types (Human/AI) at startup.
+ * - Initialize Game model with the loaded Dictionary before creating the View and Controller.
+ *
  */
 public class Main {
     public static void main(String[] args) {
