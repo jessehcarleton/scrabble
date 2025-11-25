@@ -1,77 +1,133 @@
-# Scrabble SYSC3110 Group project
+# Scrabble SYSC3110 Group Project  
 # Group 2
-# Members:
-- **Mohamed Cherif Bah**
-- **Handa, Jesse** 
-- **Olotu, Hamson** 
+
+## Members
+- **Mohamed Cherif Bah**  
+- **Handa, Jesse**  
+- **Olotu, Hamson**  
 - **Bian, James**
 
-## Overview
-This version represents **Milestone 2** of the Scrabble project.  
-It extends the original text-based implementation into a **fully interactive GUI application** using Java Swing and a **Model–View–Controller (MVC)** architecture.
+---
 
-Players can now interact directly with the board by **selecting tiles from their rack and placing them on the grid**.  
-All word validation, scoring, and placement logic are handled by the model layer.
+# Overview
+
+This version represents **Milestone 3** of the Scrabble project.  
+It builds directly on the MVC GUI from Milestone 2 and adds three major features:
+
+1. **Blank tiles** (wildcards)  
+2. **Premium board squares** (DL, TL, DW, TW)  
+3. **AI players** (automatically play legal moves)
+
+The underlying model, controller, and GUI have been extended to support these new mechanics without breaking any Milestone 2 behavior.
 
 ---
 
-## Deliverables
+# Deliverables
 
-### Source Code (Java)
+## Source Code (Java)
 
-#### Core Game Logic
-- **Board.java** – Represents the 15×15 Scrabble board. Handles word placement, rule validation (center start, adjacency), scoring, and display.  
-- **Game.java** – Manages player turns, rack refilling, and high-level game flow.  
-- **Player.java** – Maintains player state (name, rack, score) and helper methods for tile usage.  
-- **TileBag.java** – Initializes the full Scrabble tile set and manages random draws and returns.  
-- **Tile.java** – Defines a letter tile with its character and point value.  
-- **Dictionary.java** – Loads and validates words using the MIT word list, with an offline fallback set for reliability.
+### Core Game Logic (Updated for M3)
 
-#### MVC Components (New for Milestone 2)
-- **GameController.java** – Coordinates between the GUI and model. Handles placement, swapping, passing, and view updates.  
-- **GameView.java** – Swing-based graphical interface. Allows players to:
-  - Select rack tiles  
-  - Click on board cells to place them  
-  - Commit, swap, or pass their turn visually  
-  - View current scores and tiles dynamically  
+- **Board.java**  
+  Implements the full Scrabble premium square layout and updates scoring so premiums apply only to *newly placed* tiles.  
+  Adds support for blanks when validating and placing words.
 
-#### Supporting Files
-- **Main.java** – Entry point; initializes the dictionary, model, controller, and GUI view.  
-- **JUnit Tests** – Added tests for:
-  - Board placement rules (center, adjacency, overlap)  
-  - Scoring validation  
-  - Rack refilling  
-  - Word dictionary validity  
-- **UML Class Diagram** – Updated to include the MVC structure.  
-- **Sequence Diagram** – Simplified flow of the “Commit Move” process in the GUI.  
+- **Game.java**  
+  Manages both human and AI turns. Handles AI decision-making, passing, rack refills, and game-over conditions.
+
+- **Player.java**  
+  Stores rack and score. Updated to support blank tile usage and scoring.
+
+- **TileBag.java**  
+  Now includes the standard distribution of blank tiles.
+
+- **Tile.java**  
+  Supports wildcard tiles: always worth 0 points and can represent any letter when placed.
+
+- **Dictionary.java**  
+  Word lookup and validation (same as M2), with a simplified constructor for tests.
+
+### MVC Components
+
+- **GameController.java**  
+  Integrates the new AI behavior and blank-tile handling.  
+  Coordinates all player actions: placing, swapping, passing, and triggering an AI move.
+
+- **GameView.java**  
+  Displays premium square colors and prompts players to assign letters when placing blanks.  
+  Shows AI turns and updates the board and rack accordingly.
+
+- **Main.java**  
+  Launches the application and wires together the model, controller, and view.  
+  Can be run headless for test execution.
+
+### Testing (JUnit)
+
+Milestone 2 tests remain valid.
+
+New Milestone 3 tests include:
+
+- **BlankTileTest** — verifies wildcard behavior and scoring.  
+- **PremiumSquaresTest** — ensures correct scoring on DL/TL/DW/TW and that premiums are ignored for reused tiles.  
+- **AiPlayerTest** — checks that AI players take legal moves and correctly advance the turn.
+
+### Diagrams
+
+- Updated **UML class diagram** to reflect blanks, premium squares, and AI logic.  
+- Two updated **sequence diagrams**:
+  1. Human placing a word using a blank tile.  
+  2. AI choosing and performing a move.
 
 ---
 
-# How to run
-JAR:
-`java -jar scrabble-m2.jar`
+# What’s New in Milestone 3 (Summary)
 
-IDE (IntelliJ): run Main (which creates Game, GameView, and GameController)
-Dictionary: ensure URL will be able to extract valid wordlist; otherwise use a local word list.
+- Added **blank tiles** and integrated them into scoring and placement.  
+- Implemented the **premium square layout** and scoring rules.  
+- Added **AI players** that select and play legal words.  
+- Expanded JUnit tests and updated documentation.  
+- MVC components extended to support new mechanics without rewriting existing code.
+
+---
+
+# How to Run
+
+### JAR:
+```bash
+java -jar scrabble-m3.jar
+```
+
+### IDE (IntelliJ):
+Run `Main`.  
+This initializes the dictionary, model, controller, and GUI.
+
+---
 
 # Team Contributions
 
-Milestone 2 (current)
+Milestone 3 (current)
 
-Mohamed Cherif Bah — Setup the core game rules: parsing coordinates and direction, checking words against dictionary, conflict checks, and made sure placed tiles can’t be overwritten. Setup place/swap/pass in the controller and added the error messages. Wrote a few JUnit tests for board/validation.
+- **Mohamed Cherif Bah** — Implemented premium square logic, updated scoring, integrated blanks into Board and Player logic, added tests for premiums and blanks, and updated Board/Player documentation.
 
-James Bian — Built the GUI parts in GameView: Created the 15×15 board, showed the current player’s rack, and refreshed scores/next player after each turn. Cleaned up mouse/keyboard input and the listener code so moves update the view correctly. Added small tests for view↔model sync.
+- **Jesse Handa** — Implemented AI player turn logic, rack/move generation for AI, updated controller and GUI for AI flow, wrote AI tests, updated UML diagrams, sequence diagrams, and prepared the final M3 writeup/README.
 
-Hamson Olotu — Finished TileBag and Player flow: Tile distribution, random draw on success, swap tiles back into bag, pass turn logic, and kept racks at max 7. Set up 2–4 player support. Wrote tests for bag/rack/turn flow and basic scoring.
+- **Hamson Olotu** — Assisted with TileBag updates and blank tile distribution. Verified scoring and turn sequence stability with multiple AI players. Helped check M2 regression tests.
 
-Jesse Handa — Made the UML class diagram and sequence diagrams, wrote the data structures explanation, the README and how to run, listed known issues/assumptions, organized the repo (commit messages/branches), and put together the final submission package.
+- **James Bian** — Updated GUI visuals for premium squares and blank tile prompts. Ensured layout remained consistent with M2. Helped integrate AI move visualization in the view.
+
+Milestone 2
+
+(See Milestone 2 README — unchanged.)
 
 Milestone 1
 
-Mohamed Cherif Bah — Implemented Board (simulate, place, center/connect rules), text rendering; authored sequence diagram. Implemented Player (rack logic, draw/exchange/pass, scoring), rack visibility; contributed data-structures note.
+(See Milestone 1 README — unchanged.)
 
-Jesse Handa — Implemented TilesBag (distribution, draw/return, values), integrated Dictionary loading & case-insensitive validation; prepared README and run instructions. Created UML class diagram; packaged scrabble-m1.jar.
+---
 
 # Known Issues / Assumptions
 
-- Dictionary dependency: if using a URL, needs network otherwise requires local wordlist.
+- AI strategy is intentionally simple: it selects the first valid playable word, not the highest-scoring one.  
+- Dictionary lookup requires either network access (for the online list) or a local fallback list.  
+- GUI may briefly freeze during AI moves on slower machines (due to word-search loops).
+
