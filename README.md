@@ -94,7 +94,7 @@ New Milestone 3 tests include:
 
 ### JAR:
 ```bash
-java -jar scrabble-m3.jar
+java -jar ScrabbleGame.jar
 ```
 
 ### IDE (IntelliJ):
