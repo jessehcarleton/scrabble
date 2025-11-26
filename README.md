@@ -111,9 +111,9 @@ Milestone 3 (current)
 
 - **Jesse Handa** — Implemented AI player turn logic, rack/move generation for AI, updated controller and GUI for AI flow, wrote AI tests, updated UML diagrams, sequence diagrams, and prepared the final M3 writeup/README.
 
-- **Hamson Olotu** — Assisted with TileBag updates and blank tile distribution. Verified scoring and turn sequence stability with multiple AI players. Helped check M2 regression tests.
+- **Hamson Olotu** — Did absolutely nothing for milestone 3.
 
-- **James Bian** — Updated GUI visuals for premium squares and blank tile prompts. Ensured layout remained consistent with M2. Helped integrate AI move visualization in the view.
+- **James Bian** — Did absolutely nothing for milestone 3.
 
 Milestone 2
 
