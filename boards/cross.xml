@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<boardLayout name="Cross of Double Words" size="15">
+    <row>. . . . . . DW DW DW . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>DW . . . . . . DW . . . . . . DW</row>
+    <row>DW DW DW DW DW DW DW TW DW DW DW DW DW DW DW</row>
+    <row>DW . . . . . . DW . . . . . . DW</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . . DW . . . . . . .</row>
+    <row>. . . . . . DW DW DW . . . . . .</row>
+</boardLayout>

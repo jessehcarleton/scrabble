@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<boardLayout name="Standard Scrabble" size="15">
+    <row>TW . . . DL . . TW . . DL . . . TW</row>
+    <row>. DW . . . TL . . . TL . . . DW .</row>
+    <row>. . DW . . . DL . DL . . . DW . .</row>
+    <row>. . . DW . . . DL . . . DW . . .</row>
+    <row>DL . . . DW . . . . . DW . . . DL</row>
+    <row>. TL . . . TL . . . TL . . . TL .</row>
+    <row>. . DL . . . DL . DL . . . DL . .</row>
+    <row>TW . . DL . . . DW . . . DL . . TW</row>
+    <row>. . DL . . . DL . DL . . . DL . .</row>
+    <row>. TL . . . TL . . . TL . . . TL .</row>
+    <row>DL . . . DW . . . . . DW . . . DL</row>
+    <row>. . . DW . . . DL . . . DW . . .</row>
+    <row>. . DW . . . DL . DL . . . DW . .</row>
+    <row>. DW . . . TL . . . TL . . . DW .</row>
+    <row>TW . . . DL . . TW . . DL . . . TW</row>
+</boardLayout>

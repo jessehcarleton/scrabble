@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<boardLayout name="Diagonal Madness" size="15">
+    <row>TW . . . . . . . DW . . . . . TW</row>
+    <row>. DW . . . . . DW . . . . . DW .</row>
+    <row>. . TW . . . DW . DW . . . TW . .</row>
+    <row>. . . DW . DW . . . DW . DW . . .</row>
+    <row>. . . . TW . . . . . TW . . . .</row>
+    <row>. . . DW . DW . . . DW . DW . . .</row>
+    <row>. . DW . . . TW . TW . . . DW . .</row>
+    <row>. DW . . . . . TW . . . . . DW .</row>
+    <row>. . DW . . . TW . TW . . . DW . .</row>
+    <row>. . . DW . DW . . . DW . DW . . .</row>
+    <row>. . . . TW . . . . . TW . . . .</row>
+    <row>. . . DW . DW . . . DW . DW . . .</row>
+    <row>. . TW . . . DW . DW . . . TW . .</row>
+    <row>. DW . . . . . DW . . . . . DW .</row>
+    <row>TW . . . . . . . DW . . . . . TW</row>
+</boardLayout>

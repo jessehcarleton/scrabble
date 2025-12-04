@@ -10,6 +10,9 @@ import javax.swing.*;
  * Milestone 3 additions:
  * - Prompt for number of players and their types (Human/AI) at startup.
  * - Initialize Game model with the loaded Dictionary before creating the View and Controller.
+ * Milestone 4 additions:
+ * - Load board layouts from XML files using BoardLayoutLoader.
+ * - Prompt the user to select a layout and pass it into the Game model.
  *
  */
 public class Main {
@@ -32,6 +35,36 @@ public class Main {
 
         SwingUtilities.invokeLater(() -> {
             try {
+                // Load custom board layouts from XML files (Milestone 4, Phase 1)
+                java.util.List<BoardLayout> layouts = BoardLayoutLoader.loadLayouts("boards");
+
+                BoardLayout selectedLayout = null;
+                if (!layouts.isEmpty()) {
+                    Object choice = JOptionPane.showInputDialog(
+                            null,
+                            "Select a board layout:",
+                            "Board Layout",
+                            JOptionPane.QUESTION_MESSAGE,
+                            null,
+                            layouts.toArray(),
+                            layouts.get(0)
+                    );
+                    if (choice == null) {
+                        // User cancelled layout selection.
+                        return;
+                    }
+                    selectedLayout = (BoardLayout) choice;
+                } else {
+                    // No layouts found; fall back to the standard board layout.
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "No XML board layouts found in the 'boards' directory.\n" +
+                                    "The standard Scrabble layout will be used.",
+                            "Board Layouts Missing",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                }
+
                 // Prompt for number of players
                 String[] options = {"2", "3", "4"};
                 String selected = (String) JOptionPane.showInputDialog(
@@ -46,8 +79,8 @@ public class Main {
                 if (selected == null) return; // user cancelled
                 int numPlayers = Integer.parseInt(selected);
 
-                // Create model with ready dictionary
-                Game game = new Game(readyDictionary);
+                // Create model with ready dictionary and chosen layout
+                Game game = new Game(readyDictionary, selectedLayout);
 
                 // Prompt for player names
                 for (int i = 1; i <= numPlayers; i++) {

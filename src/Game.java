@@ -2,6 +2,10 @@ import java.util.*;
 
 /**
  * Main class that manages the Scrabble game loop, player turns, and game state.
+ *
+ * Milestone 4 additions:
+ * - Overloaded constructor that accepts a BoardLayout so the Game can
+ *   be initialized with a custom board configuration loaded from XML.
  */
 public class Game {
     private Board board;
@@ -18,6 +22,25 @@ public class Game {
      */
     public Game(Dictionary dictionary) {
         this.board = new Board();
+        this.tileBag = new TileBag();
+        this.dictionary = dictionary;
+        this.players = new ArrayList<>();
+        this.currentPlayerIndex = 0;
+    }
+
+    /**
+     * Constructs a new Game instance with a given dictionary and a specific
+     * {@link BoardLayout}. This is used in Milestone 4 Phase 1 to support
+     * custom board configurations loaded from XML files.
+     * <p>
+     * If {@code layout} is {@code null}, the standard Scrabble board layout
+     * is used.
+     *
+     * @param dictionary the dictionary used to validate words
+     * @param layout     the board layout to use; may be {@code null}
+     */
+    public Game(Dictionary dictionary, BoardLayout layout) {
+        this.board = (layout != null) ? new Board(layout) : new Board();
         this.tileBag = new TileBag();
         this.dictionary = dictionary;
         this.players = new ArrayList<>();
@@ -58,8 +81,7 @@ public class Game {
         System.out.println(" - HORIZONTAL means left to right");
         System.out.println(" - VERTICAL means top to bottom");
         System.out.println("You can also type PASS to skip your turn or QUIT to end the game.");
-        System.out.println("Note: The first word must cover the center square (H8).");
-
+        System.out.println();
 
         while (true) {
             Player currentPlayer = players.get(currentPlayerIndex);
@@ -74,193 +96,234 @@ public class Game {
                     : currentPlayer.getName();
 
             // Show rack and score
-            System.out.println(shortName + "'s Tiles: " + currentPlayer.rackToString() +
-                    " " + shortName + "'s score: " + currentPlayer.getScore());
+            System.out.println(shortName + "'s rack: " + currentPlayer.getRack());
+            System.out.println(shortName + "'s score: " + currentPlayer.getScore());
 
-            // Show turn options
-            System.out.println("\nYour options:");
-            System.out.println("  [0] Place Tile(s)");
-            System.out.println("  [1] Swap Tiles");
-            System.out.println("  [2] Skip Turn");
+            // Ask for player's move
+            System.out.println("Enter your move (e.g., H8 HORIZONTAL HELLO) or PASS/QUIT:");
+            String input = scanner.nextLine().trim();
+            long startTime = System.currentTimeMillis(); // Start timing
 
-            System.out.println("\nEnter your move:");
-            System.out.println("  → Format: H8 HORIZONTAL HELLO / H8 VERTICAL HELLO");
-            System.out.println("  → Or type: PASS or QUIT");
-            System.out.print("> ");
-            String input = scanner.nextLine().trim().toUpperCase();
+            if (input.equalsIgnoreCase("QUIT")) {
+                // Confirm quitting the game
+                System.out.println(formatMessage("confirm", "Are you sure you want to quit? (yes/no)", true));
+                String confirm = scanner.nextLine().trim();
+                if (confirm.equalsIgnoreCase("yes")) {
+                    System.out.println("Game over! Final scores:");
+                    printScores();
+                    break;
+                } else {
+                    System.out.println("Continuing the game.");
+                    continue;
+                }
+            } else if (input.equalsIgnoreCase("PASS")) {
+                // Confirm passing the turn
+                System.out.println(formatMessage("confirm", "Are you sure you want to pass your turn? (yes/no)", true));
+                String confirm = scanner.nextLine().trim();
+                if (confirm.equalsIgnoreCase("yes")) {
+                    System.out.println(currentPlayer.getName() + " passes their turn.");
+                    nextPlayer();
+                    continue;
+                } else {
+                    System.out.println("Turn not passed. Enter your move.");
+                    continue;
+                }
+            }
 
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println(formatMessage("error", "Invalid input format. Please try again.", true));
+                continue;
+            }
 
-            // Handle quitting
-            if (input.equals("QUIT")) {
-                System.out.println("Thanks for playing!");
+            String position = parts[0].toUpperCase();
+            String direction = parts[1].toUpperCase();
+            String word = parts[2].toUpperCase();
+
+            if (!dictionary.isValid(word)) {
+                System.out.println(formatMessage("error", "The word \"" + word + "\" is not in the dictionary.", true));
+                continue;
+            }
+
+            if (position.length() < 2 || position.length() > 3) {
+                System.out.println(formatMessage("error", "Invalid position. Please use format like H8 or A15.", true));
+                continue;
+            }
+
+            char colChar = position.charAt(0);
+            if (colChar < 'A' || colChar > 'O') {
+                System.out.println(formatMessage("error", "Invalid column. Must be A to O.", true));
+                continue;
+            }
+            int col = colChar - 'A';
+
+            int row;
+            try {
+                row = Integer.parseInt(position.substring(1)) - 1;
+            } catch (NumberFormatException e) {
+                System.out.println(formatMessage("error", "Invalid row. Please use a number from 1 to 15.", true));
+                continue;
+            }
+            if (row < 0 || row >= 15) {
+                System.out.println(formatMessage("error", "Invalid row. Must be between 1 and 15.", true));
+                continue;
+            }
+
+            boolean horizontal;
+            if (direction.equals("H") || direction.equals("HORIZONTAL")) {
+                horizontal = true;
+            } else if (direction.equals("V") || direction.equals("VERTICAL")) {
+                horizontal = false;
+            } else {
+                System.out.println(formatMessage("error", "Invalid direction. Use H or V (HORIZONTAL or VERTICAL).", true));
+                continue;
+            }
+
+            boolean success = board.placeWord(word, row, col, horizontal, currentPlayer);
+            if (!success) {
+                System.out.println(formatMessage("error", "Failed to place the word. Check for conflicts, bounds, and connectivity.", true));
+                continue;
+            }
+
+            refillRack(currentPlayer);
+            long endTime = System.currentTimeMillis(); // End timing
+            long moveTime = endTime - startTime; // Calculate the time taken
+            System.out.println(formatMessage("success", "Word placed successfully! Your new score: " + currentPlayer.getScore(), true));
+            System.out.println("Time taken for last move: " + moveTime + "ms");
+
+            if (isGameOver()) {
+                System.out.println("The game has ended!");
+                printScores();
                 break;
             }
 
-            // Handle passing
-            if (input.equals("PASS") || input.equals("2")) {
-                System.out.println(currentPlayer.getName() + " passed.");
-                nextPlayer();
-                continue;
-            }
-            if (input.equals("1")) {
-                handleSwap(currentPlayer, scanner);
-                nextPlayer();
-                continue;
-            }
-
-            // Parse move input
-            String[] parts = input.split(" ");
-            if (parts.length != 3) {
-                System.out.println("Invalid input. Please use the format: H8 HORIZONTAL HELLO");
-                System.out.println(" - HORIZONTAL = left to right");
-                System.out.println(" - VERTICAL = top to bottom");
-                continue;
-            }
-
-            String coord = parts[0];
-            boolean horizontal = parts[1].equals("HORIZONTAL");
-            String word = parts[2];
-
-            // Validate coordinate format
-            if (coord.length() < 2 || coord.length() > 3) {
-                System.out.println("Invalid coordinate. Use format like H8 or D12.");
-                continue;
-            }
-
-            // Extract row and column from coordinate
-            char colChar = coord.charAt(0);
-            int rowNum;
-            try {
-                rowNum = Integer.parseInt(coord.substring(1)) - 1;
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid row number in coordinate.");
-                continue;
-            }
-
-            int colNum = colChar - 'A';
-            if (colNum < 0 || colNum >= 15 || rowNum < 0 || rowNum >= 15) {
-                System.out.println("Coordinates out of bounds. Use A–O and 1–15.");
-                continue;
-            }
-
-            // Validate word against dictionary
-            if (!dictionary.isValid(word)) {
-                System.out.println("Invalid word! Please enter a valid word from the dictionary.");
-                continue;
-            }
-
-            // Attempt to place the word on the board
-            boolean success = board.placeWord(word, rowNum, colNum, horizontal, currentPlayer);
-            if (success) {
-                refillRack(currentPlayer); // Refill rack after successful move
-                nextPlayer();              // Advance to next player
-            } else {
-                System.out.println("Word placement failed. Make sure it fits and doesn't conflict.");
-            }
+            nextPlayer();
         }
     }
+
     /**
-     * Advances to the next player's turn.
+     * Formats messages with types and truncates if too long.
+     * - Types: error, success, confirm
+     *
+     * @param type    the type of the message ("error", "success", "confirm")
+     * @param message the message content
+     * @param truncate whether to truncate long messages
+     * @return the formatted message
      */
-    void nextPlayer() {
+    private String formatMessage(String type, String message, boolean truncate) {
+        if (truncate && message.length() > 50) {
+            message = message.substring(0, 47) + "...";
+        }
+        switch (type.toLowerCase()) {
+            case "error":
+                return "[ERROR] " + message;
+            case "success":
+                return "[SUCCESS] " + message;
+            case "confirm":
+                return "[CONFIRM] " + message;
+            default:
+                return message;
+        }
+    }
+
+    /**
+     * Refills a player's rack up to 7 tiles from the tile bag.
+     *
+     * @param player the player whose rack should be refilled
+     */
+    public void refillRack(Player player) {
+        while (player.getRack().size() < 7 && !tileBag.isEmpty()) {
+            player.getRack().add(tileBag.drawTile());
+        }
+    }
+
+    /**
+     * Advances the turn to the next player in the list.
+     * Wraps around to the first player after the last.
+     */
+    public void nextPlayer() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     }
 
     /**
-     * Refills the player's rack from the tile bag until it contains 7 tiles.
-     * Draws random tiles from the bag and adds them to the player's rack.
-     * If the bag is empty, no tiles are added.
+     * Checks if the game is over.
+     * The game is over when the tile bag is empty and a player has used all their tiles.
      *
-     * @param player the player whose rack should be refilled
+     * @return true if the game is over, false otherwise
      */
-    void refillRack(Player player) {
-        while (player.getRack().size() < 7 && tileBag.remainingTiles() > 0) {
-            Tile tile = tileBag.drawTile();
-            if (tile != null) {
-                player.getRack().add(tile);
+    public boolean isGameOver() {
+        if (!tileBag.isEmpty()) {
+            return false;
+        }
+        for (Player player : players) {
+            if (player.getRack().isEmpty()) {
+                return true;
             }
+        }
+        return false;
+    }
+
+    /**
+     * Prints the final scores of all players.
+     * Indicates the winner based on the highest score.
+     */
+    public void printScores() {
+        int highestScore = -1;
+        Player winner = null;
+        System.out.println("Final Scores:");
+        for (Player player : players) {
+            System.out.println(player.getName() + ": " + player.getScore());
+            if (player.getScore() > highestScore) {
+                highestScore = player.getScore();
+                winner = player;
+            }
+        }
+        if (winner != null) {
+            System.out.println("Winner: " + winner.getName() + " with " + highestScore + " points!");
         }
     }
 
     /**
-     * Converts a player's rack of tiles into a printable string.
+     * Gets the board used in this game.
      *
-     * @param rack the list of tiles in the player's rack
-     * @return a string representation of the rack
+     * @return the Board instance
      */
-    private String rackToString(List<Tile> rack) {
-        StringBuilder sb = new StringBuilder();
-        for (Tile t : rack) sb.append(t.getLetter()).append(" ");
-        return sb.toString().trim();
-    }
-
-
-    /**
-     * Allows the player to swap selected tiles from their rack.
-     *
-     * @param player the current player
-     * @param scanner the scanner for input
-     */
-    private void handleSwap(Player player, Scanner scanner) {
-        System.out.println("Your rack: " + player.rackToString());
-        System.out.println("Enter the indices of tiles to swap (e.g., 0 2 5), or type CANCEL to go back:");
-        String input = scanner.nextLine().trim().toUpperCase();
-
-        if (input.equals("CANCEL")) {
-            System.out.println("Swap cancelled.");
-            return;
-        }
-
-        String[] tokens = input.split(" ");
-        List<Tile> toSwap = new ArrayList<>();
-        List<Integer> indices = new ArrayList<>();
-
-        for (String token : tokens) {
-            try {
-                int index = Integer.parseInt(token);
-                if (index < 0 || index >= player.getRack().size()) {
-                    System.out.println("Invalid index: " + index);
-                    return;
-                }
-                indices.add(index);
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input: " + token);
-                return;
-            }
-        }
-
-        // Collect tiles to swap
-        for (int i : indices) {
-            toSwap.add(player.getRack().get(i));
-        }
-
-        // Remove and replace
-        for (Tile t : toSwap) {
-            player.getRack().remove(t);
-            tileBag.getTiles().add(t); // return to bag
-        }
-
-        refillRack(player);
-        System.out.println("Tiles swapped. New rack: " + player.rackToString());
-    }
-
-    /// Getters and setters
-    public List<Player> getPlayers() {
-        return players;
-    }
-
     public Board getBoard() {
         return board;
     }
 
+    /**
+     * Gets the tile bag used in this game.
+     *
+     * @return the TileBag instance
+     */
     public TileBag getTileBag() {
         return tileBag;
     }
 
+    /**
+     * Gets the dictionary used for word validation.
+     *
+     * @return the Dictionary instance
+     */
     public Dictionary getDictionary() {
         return dictionary;
     }
 
+    /**
+     * Gets the list of players participating in the game.
+     *
+     * @return the list of Player objects
+     */
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    /**
+     * Returns the index of the player whose turn it currently is.
+     *
+     * @return zero-based index of current player
+     */
     public int getCurrentPlayerIndex() {
         return currentPlayerIndex;
     }
