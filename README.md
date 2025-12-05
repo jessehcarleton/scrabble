@@ -176,6 +176,16 @@ Two new test classes were created:
 
 # How to Run the Program
 
+Make sure the JAR and the `boards/` folder are in the same directory:
+
+dist/
+  ScrabbleGame.jar
+  boards/
+      standard.xml
+      diagonal.xml
+      cross.xml
+
+Then run:
 ## Running Using JAR
 
 ### JAR:
@@ -183,12 +193,12 @@ Two new test classes were created:
 java -jar ScrabbleGame.jar
 ```
 
-### IDE (IntelliJ):
+If the `boards/` folder is missing, the program will fall back to the default board layout.
 
-## Running in IntelliJ IDEA
+## Running in IntelliJ
 1. Open the project.
-2. Run `Main`.
-3. The GUI will launch automatically.
+2. Ensure the `boards/` directory is located in the project root.
+3. Run `Main` to launch the GUI.
 
 ---
 
