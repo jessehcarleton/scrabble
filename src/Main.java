@@ -11,6 +11,7 @@ import javax.swing.*;
  * - Prompt for number of players and their types (Human/AI) at startup.
  * - Initialize Game model with the loaded Dictionary before creating the View and Controller.
  * Milestone 4 additions:
+ *
  * - Load board layouts from XML files using BoardLayoutLoader.
  * - Prompt the user to select a layout and pass it into the Game model.
  *

@@ -82,6 +82,8 @@ public class GameView extends JFrame {
 
     /**
      * Constructs the GameView and optionally shows the window (headless tests can hide it).
+     *
+     * @param showWindow true to show the window, false to construct it hidden
      */
     public GameView(boolean showWindow) {
         setTitle("Scrabble Game");
@@ -96,18 +98,43 @@ public class GameView extends JFrame {
 
     /**
      * Initializes all GUI components and listeners.
+     * - Menu bar (Game -> Save / Load)
      * - Top info bar (player, score, bag, status)
      * - Board grid with coordinate labels (16x16 with header/side labels)
      * - Rack panel
      * - Controls panel with orientation + action buttons
      */
     private void initComponents() {
-        // Top panel: player info and score
+        // ---------- Menu bar: Save / Load game ----------
+        JMenuBar menuBar = new JMenuBar();
+        JMenu gameMenu = new JMenu("Game");
+        JMenuItem saveItem = new JMenuItem("Save Game");
+        JMenuItem loadItem = new JMenuItem("Load Game");
+
+        saveItem.addActionListener(e -> {
+            if (controller != null) {
+                controller.showSaveGameDialog();
+            }
+        });
+
+        loadItem.addActionListener(e -> {
+            if (controller != null) {
+                controller.showLoadGameDialog();
+            }
+        });
+
+        gameMenu.add(saveItem);
+        gameMenu.add(loadItem);
+        menuBar.add(gameMenu);
+        setJMenuBar(menuBar);
+
+        // ---------- Top panel: player info and score ----------
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
         playerLabel = new JLabel("Player: ");
         scoreLabel = new JLabel("Score: 0");
         bagLabel = new JLabel("Tiles in bag: --");
         statusLabel = new JLabel("Ready.");
+
         topPanel.add(playerLabel);
         topPanel.add(scoreLabel);
         topPanel.add(bagLabel);
@@ -115,7 +142,7 @@ public class GameView extends JFrame {
         topPanel.add(statusLabel);
         add(topPanel, BorderLayout.NORTH);
 
-        // Center: Board with coordinate labels (16x16 grid)
+        // ---------- Center: Board with coordinate labels (16x16 grid) ----------
         boardPanel = new JPanel(new GridLayout(16, 16, 4, 4));
         boardPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         boardPanel.setBackground(new Color(245, 245, 245));
@@ -163,7 +190,7 @@ public class GameView extends JFrame {
         }
         add(boardPanel, BorderLayout.CENTER);
 
-        // Bottom: Rack and controls
+        // ---------- Bottom: Rack and controls ----------
         JPanel bottomPanel = new JPanel(new BorderLayout());
 
         rackPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -278,7 +305,7 @@ public class GameView extends JFrame {
     }
 
     /**
-     * Builds the rack UI for the active player with LARGE buttons and **explicit points shown**:
+     * Builds the rack UI for the active player with LARGE buttons and explicit points shown:
      * - Uses Swing HTML text to render a big letter with a small score underneath.
      * - Also sets a tooltip (LETTER (points)) as a backup.
      *
@@ -554,6 +581,7 @@ public class GameView extends JFrame {
         }
         controller.handleSwapTiles(indices);
     }
+
     /**
      * Enables or disables the Undo and Redo buttons based on the
      * currently available history.

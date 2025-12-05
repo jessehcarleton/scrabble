@@ -1,25 +1,53 @@
 import java.util.List;
 import java.util.Comparator;
 import java.util.stream.Collectors;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
+import java.io.IOException;
+
 import javax.swing.SwingUtilities;
+import javax.swing.JOptionPane;
+import javax.swing.JFileChooser;
 
 /**
  * GameController acts as the mediator between the Game model and the GameView.
  * It handles user actions from the view and updates the model accordingly.
  *
- * Milestone 2 patches:
- * - Removes double-scoring (Board is the single authority that applies score).
- * - Centralizes placement/swap/pass flows.
- * - Triggers View re-render after each state change.
+ * <p><b>Milestone 2:</b></p>
+ * <ul>
+ *     <li>Removes double-scoring (Board is the single authority that applies score).</li>
+ *     <li>Centralizes placement/swap/pass flows.</li>
+ *     <li>Triggers View re-render after each state change.</li>
+ * </ul>
  *
- * Milestone 3 additions:
- * - Implements a simple AI that plays automatically on its turn.
+ * <p><b>Milestone 3:</b></p>
+ * <ul>
+ *     <li>Implements a simple AI that plays automatically on its turn.</li>
+ * </ul>
  *
- * Milestone 4 (Phase 2) additions:
- * - Adds multi-step undo/redo support using {@link GameState} and
- *   {@link UndoRedoManager}.
- * - Undo/redo operates purely on the model (Game/Board/Player/TileBag) and
- *   then re-renders the view from that model.
+ * <p><b>Milestone 4 – Phase 2 (Undo/Redo):</b></p>
+ * <ul>
+ *     <li>Adds multi-step undo/redo support using {@link GameState} and
+ *         {@link UndoRedoManager} logic (see fields and methods below).</li>
+ *     <li>Undo/redo operates purely on the model (Game/Board/Player/TileBag) and
+ *         then re-renders the view from that model.</li>
+ * </ul>
+ *
+ * <p><b>Milestone 4 – Phase 3 (Save/Load):</b></p>
+ * <ul>
+ *     <li>Adds the ability to serialize the entire {@link Game} to disk and
+ *         load it back later.</li>
+ *     <li>Save/load reuses the same serialized form used by undo/redo, so the
+ *         entire game state is preserved (board, players, scores, tile bag, etc.).</li>
+ *     <li>The controller exposes both low-level {@code saveGameToFile}/{@code loadGameFromFile}
+ *         methods and high-level dialog-based methods
+ *         {@code showSaveGameDialog}/{@code showLoadGameDialog} for the GUI.</li>
+ * </ul>
  */
 public class GameController {
 
@@ -223,6 +251,10 @@ public class GameController {
         return game;
     }
 
+    // ---------------------------------------------------------------------
+    //                          AI SUPPORT
+    // ---------------------------------------------------------------------
+
     /** If the active player is AI-controlled, attempt to play automatically. */
     private void maybePlayAiTurn() {
         if (aiTurnInProgress) return;
@@ -288,6 +320,10 @@ public class GameController {
 
     /**
      * Picks rack-buildable dictionary words, preferring higher letter sums/lengths.
+     *
+     * @param player the player whose rack is used as constraint
+     * @param limit  maximum number of candidate words to return
+     * @return list of candidate dictionary words
      */
     private List<String> pickCandidateWords(Player player, int limit) {
         int blanks = (int) player.getRack().stream().filter(Tile::isBlank).count();
@@ -324,6 +360,10 @@ public class GameController {
         return score;
     }
 
+    // ---------------------------------------------------------------------
+    //                        UNDO/REDO HELPER
+    // ---------------------------------------------------------------------
+
     /**
      * Updates the enabled/disabled state of the Undo and Redo buttons
      * based on the history currently available in {@link UndoRedoManager}.
@@ -331,6 +371,130 @@ public class GameController {
     private void updateUndoRedoButtons() {
         if (view != null) {
             view.setUndoRedoEnabled(undoRedoManager.canUndo(), undoRedoManager.canRedo());
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    //                         SAVE / LOAD (PHASE 3)
+    // ---------------------------------------------------------------------
+
+    /**
+     * Saves the entire {@link Game} object to the specified file using Java serialization.
+     * <p>
+     * The saved file will contain the full game state (board tiles, players, scores,
+     * tile bag contents, current turn, dictionary, etc.).
+     *
+     * @param file the destination file chosen by the user
+     */
+    public void saveGameToFile(File file) {
+        if (file == null) {
+            return;
+        }
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(game);
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Game saved successfully to:\n" + file.getAbsolutePath(),
+                    "Save Game",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Failed to save game:\n" + e.getMessage(),
+                    "Save Game Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
+     * Loads a {@link Game} instance from the specified file using Java serialization.
+     * <p>
+     * On success:
+     * <ul>
+     *     <li>{@link #game} is replaced with the loaded instance.</li>
+     *     <li>Undo/redo history is cleared and re-seeded with the loaded state.</li>
+     *     <li>The view is re-rendered from the loaded model.</li>
+     *     <li>If the loaded current player is AI, an AI move may be triggered.</li>
+     * </ul>
+     *
+     * @param file the source file to load from
+     */
+    public void loadGameFromFile(File file) {
+        if (file == null) {
+            return;
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            Object obj = ois.readObject();
+            if (!(obj instanceof Game)) {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "The selected file does not contain a valid saved game.",
+                        "Load Game Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            this.game = (Game) obj;
+
+            // Reset undo/redo history to the just-loaded state
+            undoRedoManager.clear();
+            undoRedoManager.push(GameState.from(game));
+
+            if (view != null) {
+                view.renderGameState(game);
+                updateUndoRedoButtons();
+            }
+
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Game loaded successfully from:\n" + file.getAbsolutePath(),
+                    "Load Game",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
+            // After loading, if it's an AI player's turn, optionally let AI play.
+            maybePlayAiTurn();
+
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Failed to load game:\n" + e.getMessage(),
+                    "Load Game Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
+     * Opens a file chooser dialog to let the user pick a location and then
+     * saves the game to that file.
+     * <p>
+     * This convenience method is intended to be called by the view, e.g.,
+     * from a "Save Game" button or menu item.
+     */
+    public void showSaveGameDialog() {
+        JFileChooser chooser = new JFileChooser();
+        int result = chooser.showSaveDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            saveGameToFile(chooser.getSelectedFile());
+        }
+    }
+
+    /**
+     * Opens a file chooser dialog to let the user select a saved game file
+     * and then loads the game from that file.
+     * <p>
+     * This convenience method is intended to be called by the view, e.g.,
+     * from a "Load Game" button or menu item.
+     */
+    public void showLoadGameDialog() {
+        JFileChooser chooser = new JFileChooser();
+        int result = chooser.showOpenDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            loadGameFromFile(chooser.getSelectedFile());
         }
     }
 }
