@@ -1,3 +1,4 @@
+import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -7,7 +8,7 @@ import java.util.*;
  * - Overloaded constructor that accepts a BoardLayout so the Game can
  *   be initialized with a custom board configuration loaded from XML.
  */
-public class Game {
+public class Game  implements Serializable {
     private Board board;
     private TileBag tileBag;
     private Dictionary dictionary;

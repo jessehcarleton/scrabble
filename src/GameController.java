@@ -11,22 +11,34 @@ import javax.swing.SwingUtilities;
  * - Removes double-scoring (Board is the single authority that applies score).
  * - Centralizes placement/swap/pass flows.
  * - Triggers View re-render after each state change.
- * Milestone 3 additions:
- * Implements a simple AI that plays automatically on its turn.
  *
+ * Milestone 3 additions:
+ * - Implements a simple AI that plays automatically on its turn.
+ *
+ * Milestone 4 (Phase 2) additions:
+ * - Adds multi-step undo/redo support using {@link GameState} and
+ *   {@link UndoRedoManager}.
+ * - Undo/redo operates purely on the model (Game/Board/Player/TileBag) and
+ *   then re-renders the view from that model.
  */
 public class GameController {
+
     /** The Game model containing players, board, tile bag, and dictionary. */
-    private final Game game;
+    private Game game;
 
     /** The GameView GUI responsible for rendering the game state. */
-    private final GameView view;
+    private GameView view;
+
     /** Prevents nested AI recursion. */
     private boolean aiTurnInProgress = false;
+
+    /** Manages undo/redo history for the game. */
+    private final UndoRedoManager undoRedoManager = new UndoRedoManager();
 
     /**
      * Constructs a GameController with the given model and view.
      * Initializes the game state and sets up communication with the view.
+     * Also records the initial game state for undo/redo.
      *
      * @param game the Game model instance
      * @param view the GameView GUI instance
@@ -34,10 +46,18 @@ public class GameController {
     public GameController(Game game, GameView view) {
         this.game = game;
         this.view = view;
+
         if (view != null) {
             view.setController(this);
             view.renderGameState(game);
+            // Initially nothing to undo/redo
+            view.setUndoRedoEnabled(false, false);
         }
+
+        // Record initial state as the baseline in the undo stack.
+        undoRedoManager.push(GameState.from(game));
+
+        // If the first active player is AI, let it play automatically.
         maybePlayAiTurn();
     }
 
@@ -71,7 +91,7 @@ public class GameController {
         boolean success = board.placeWord(word, row, col, horizontal, currentPlayer);
         if (success) {
             refillRack(currentPlayer);
-            advanceTurn();
+            advanceTurn(); // will re-render and possibly trigger AI
         } else {
             if (view != null) {
                 view.showError("Word placement failed. Check connectivity, conflicts, bounds, and first-move center.");
@@ -90,15 +110,21 @@ public class GameController {
         Player currentPlayer = game.getPlayers().get(game.getCurrentPlayerIndex());
         TileBag bag = game.getTileBag();
 
-        List<Tile> toSwap = currentPlayer.getTilesAtIndices(indices);
-        if (toSwap.isEmpty()) {
-            if (view != null) view.showError("No valid indices selected for swap.");
+        if (bag.remainingTiles() < indices.size()) {
+            if (view != null) view.showError("Not enough tiles in bag to swap that many.");
             return;
         }
-        if (bag.isEmpty()) {
-            if (view != null) view.showError("Cannot swap: tile bag is empty.");
+        if (indices.isEmpty()) {
+            if (view != null) view.showError("No tiles selected to swap.");
             return;
         }
+
+        // Collect tiles to swap
+        List<Tile> toSwap = indices.stream()
+                .distinct()
+                .sorted()
+                .map(i -> currentPlayer.getRack().get(i))
+                .collect(Collectors.toList());
 
         // Return selected tiles to bag
         for (Tile t : toSwap) {
@@ -113,10 +139,45 @@ public class GameController {
 
     /**
      * Handles the action of passing the current player's turn.
-     * Advances to the next player and updates the view.
+     * Simply advances the turn to the next player.
      */
     public void handlePassTurn() {
         advanceTurn();
+    }
+
+    /**
+     * Performs an undo operation (if possible) and refreshes the view.
+     * <p>
+     * Undo reverts the game to the previous recorded state, including:
+     * board tiles, player racks/scores, tile bag contents, and current turn.
+     */
+    public void handleUndo() {
+        GameState previous = undoRedoManager.undo();
+        if (previous == null) {
+            return;
+        }
+        this.game = previous.getGame();
+        if (view != null) {
+            view.renderGameState(game);
+            updateUndoRedoButtons();
+        }
+    }
+
+    /**
+     * Performs a redo operation (if possible) and refreshes the view.
+     * <p>
+     * Redo restores a state that was previously undone.
+     */
+    public void handleRedo() {
+        GameState next = undoRedoManager.redo();
+        if (next == null) {
+            return;
+        }
+        this.game = next.getGame();
+        if (view != null) {
+            view.renderGameState(game);
+            updateUndoRedoButtons();
+        }
     }
 
     /**
@@ -135,14 +196,21 @@ public class GameController {
     }
 
     /**
-     * Advances the turn to the next player in order, wraps at the end,
-     * and instructs the view to re-render the current game state.
+     * Advances the turn to the next player in order, wraps around, re-renders
+     * the view, records the new game state for undo/redo, and then optionally
+     * lets the AI play if the next player is AI-controlled.
      */
     void advanceTurn() {
         game.nextPlayer();
         if (view != null) {
             view.renderGameState(game);
         }
+
+        // Record new current state after the turn has fully advanced.
+        undoRedoManager.push(GameState.from(game));
+        updateUndoRedoButtons();
+
+        // Potentially trigger AI move based on the new current player.
         maybePlayAiTurn();
     }
 
@@ -174,7 +242,11 @@ public class GameController {
         });
     }
 
-    /** Simple AI: try a handful of rack-valid dictionary words and place the first legal move. */
+    /**
+     * Simple AI: try a handful of rack-valid dictionary words and place the first legal move.
+     *
+     * @param aiPlayer the AI-controlled player
+     */
     private void runAiTurn(Player aiPlayer) {
         Board board = game.getBoard();
         List<String> candidates = pickCandidateWords(aiPlayer, 30);
@@ -182,7 +254,7 @@ public class GameController {
         for (String word : candidates) {
             if (tryPlaceAnywhere(word, aiPlayer, board)) {
                 refillRack(aiPlayer);
-                advanceTurn();
+                advanceTurn(); // this will also push new undo state
                 return;
             }
         }
@@ -191,14 +263,23 @@ public class GameController {
         handlePassTurn();
     }
 
-    /** Attempts to place the word at any coordinate/orientation; returns true on success. */
+    /**
+     * Attempts to place the word somewhere on the board for the AI player.
+     * Tries each cell as a starting point in both orientations.
+     *
+     * @param word     the word to place
+     * @param player   the AI player
+     * @param board    the board
+     * @return true if a placement succeeded, false otherwise
+     */
     private boolean tryPlaceAnywhere(String word, Player player, Board board) {
-        for (boolean horizontal : new boolean[]{true, false}) {
-            for (int row = 0; row < 15; row++) {
-                for (int col = 0; col < 15; col++) {
-                    if (board.placeWord(word, row, col, horizontal, player)) {
-                        return true;
-                    }
+        for (int row = 0; row < 15; row++) {
+            for (int col = 0; col < 15; col++) {
+                if (board.placeWord(word, row, col, true, player)) {
+                    return true;
+                }
+                if (board.placeWord(word, row, col, false, player)) {
+                    return true;
                 }
             }
         }
@@ -221,7 +302,12 @@ public class GameController {
                 .collect(Collectors.toList());
     }
 
-    /** Rough heuristic for word strength: sum of tile points (ignores premiums). */
+    /**
+     * Rough letter scoring heuristic used by the AI to sort candidate words.
+     *
+     * @param word candidate word
+     * @return approximate score
+     */
     private int roughLetterScore(String word) {
         int score = 0;
         for (char c : word.toCharArray()) {
@@ -236,5 +322,15 @@ public class GameController {
             }
         }
         return score;
+    }
+
+    /**
+     * Updates the enabled/disabled state of the Undo and Redo buttons
+     * based on the history currently available in {@link UndoRedoManager}.
+     */
+    private void updateUndoRedoButtons() {
+        if (view != null) {
+            view.setUndoRedoEnabled(undoRedoManager.canUndo(), undoRedoManager.canRedo());
+        }
     }
 }

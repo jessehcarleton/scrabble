@@ -36,6 +36,10 @@ public class GameView extends JFrame {
     private JButton clearButton;
     private JButton swapButton;
     private JButton passButton;
+    /** Undo the last move. */
+    private JButton undoButton;
+    /** Redo a previously undone move. */
+    private JButton redoButton;
 
     // Orientation controls
     private JRadioButton horizontalRadio;
@@ -190,9 +194,11 @@ public class GameView extends JFrame {
         clearButton = new JButton("Clear Move");
         swapButton = new JButton("Swap Tiles");
         passButton = new JButton("Pass Turn");
+        undoButton = new JButton("Undo");
+        redoButton = new JButton("Redo");
 
         Dimension actionSize = new Dimension(150, 36);
-        for (JButton b : new JButton[]{commitButton, clearButton, swapButton, passButton}) {
+        for (JButton b : new JButton[]{commitButton, clearButton, swapButton, passButton, undoButton, redoButton}) {
             b.setPreferredSize(actionSize);
             b.setFocusPainted(false);
         }
@@ -201,6 +207,8 @@ public class GameView extends JFrame {
         buttonsPanel.add(clearButton);
         buttonsPanel.add(swapButton);
         buttonsPanel.add(passButton);
+        buttonsPanel.add(undoButton);
+        buttonsPanel.add(redoButton);
         controls.add(buttonsPanel, gbc);
 
         // Wire up actions
@@ -208,6 +216,8 @@ public class GameView extends JFrame {
         clearButton.addActionListener(e -> clearPendingPlacement());
         swapButton.addActionListener(this::onSwapTiles);
         passButton.addActionListener(e -> { if (controller != null) controller.handlePassTurn(); });
+        undoButton.addActionListener(e -> { if (controller != null) controller.handleUndo(); });
+        redoButton.addActionListener(e -> { if (controller != null) controller.handleRedo(); });
 
         bottomPanel.add(controls, BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
@@ -543,6 +553,21 @@ public class GameView extends JFrame {
             }
         }
         controller.handleSwapTiles(indices);
+    }
+    /**
+     * Enables or disables the Undo and Redo buttons based on the
+     * currently available history.
+     *
+     * @param canUndo true if there is at least one move to undo
+     * @param canRedo true if there is at least one move to redo
+     */
+    public void setUndoRedoEnabled(boolean canUndo, boolean canRedo) {
+        if (undoButton != null) {
+            undoButton.setEnabled(canUndo);
+        }
+        if (redoButton != null) {
+            redoButton.setEnabled(canRedo);
+        }
     }
 
     /** Returns a background color for the given premium square. */

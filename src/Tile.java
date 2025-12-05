@@ -1,8 +1,10 @@
+import java.io.Serializable;
+
 /**
  * Represents a single letter tile in Scrabble.
  * Each tile has a letter and a point value.
  */
-public class Tile {
+public class Tile implements Serializable {
     private char letter;
     private int points;
     private final boolean blank;

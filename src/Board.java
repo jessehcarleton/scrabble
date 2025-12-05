@@ -1,3 +1,5 @@
+import java.io.Serializable;
+
 /**
  * Represents the Scrabble board as a 15x15 grid.
  * Handles word placement, tile access, and board display.
@@ -17,7 +19,7 @@
  * - Adds a constructor that accepts a BoardLayout so the premium
  *   configuration can be loaded from external XML files.
  */
-public class Board {
+public class Board implements Serializable {
     private final Tile[][] grid;
     private final Premium[][] premiumGrid;
 

@@ -1,10 +1,11 @@
+import java.io.Serializable;
 import java.util.*;
 
 /**
  * Represents the bag of tiles in Scrabble.
  * Handles initialization and random drawing of tiles.
  */
-public class TileBag {
+public class TileBag implements Serializable {
     private List<Tile> tiles;
 
     /**

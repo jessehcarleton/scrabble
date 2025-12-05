@@ -1,3 +1,4 @@
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -5,7 +6,7 @@ import java.util.List;
  * Represents a player in the Scrabble game.
  * Each player has a name, a rack of letter tiles, and a score.
  */
-public class Player {
+public class Player implements Serializable {
     private String name;
     private List<Tile> rack;
     private int score;

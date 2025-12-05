@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
@@ -13,7 +14,7 @@ import java.util.Set;
  * - Added preset set of words constructor for testing.
  *
  */
-public class Dictionary {
+public class Dictionary implements Serializable {
     private Set<String> validWords;
 
     /**
